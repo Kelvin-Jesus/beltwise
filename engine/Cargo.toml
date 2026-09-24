@@ -1,0 +1,13 @@
+[package]
+name = "engine"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Beltwise simulation core: data-oriented factory sim compiled to WebAssembly"
+
+[lib]
+# cdylib -> the .wasm we ship; rlib -> lets `cargo test` exercise the sim natively.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Intentionally empty: the engine is std-only, no wasm-bindgen / web-sys glue.

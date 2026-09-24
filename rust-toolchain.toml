@@ -1,0 +1,6 @@
+# Pinned so local builds and CI emit the same Wasm feature set (wasm-opt flags depend on it).
+[toolchain]
+channel = "1.96.0"
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
+components = ["clippy", "rustfmt"]

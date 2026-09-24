@@ -1,0 +1,83 @@
+# Builds the game (Rust -> Wasm -> wasm-opt, TypeScript -> esbuild) and deploys dist/ to
+# GitHub Pages. One-time setup: repo Settings -> Pages -> Build and deployment ->
+# Source: "GitHub Actions". The site is fully static and uses relative URLs only, so it
+# works unchanged at https://<user>.github.io/<repo>/ or on a custom domain.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      # Installs the exact toolchain, wasm32 target and components pinned in
+      # rust-toolchain.toml, so CI emits the same Wasm feature set as local builds.
+      - name: Install Rust toolchain
+        run: rustup toolchain install && rustc --version
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # esbuild, TypeScript and Binaryen (wasm-opt) are pinned in package-lock.json.
+      - name: Install JS tooling
+        run: npm ci
+
+      - name: Lint engine
+        run: |
+          cargo fmt --all --check
+          cargo clippy -p engine --all-targets --locked -- -D warnings
+
+      - name: Test engine
+        run: cargo test -p engine --locked
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build (cargo release -> wasm-opt -O3 -> esbuild)
+        run: npm run build
+
+      - name: Report bundle size
+        run: |
+          {
+            echo "### Bundle"
+            echo '```'
+            ls -l dist | awk 'NR>1 {printf "%-24s %8.1f KB\n", $9, $5/1024}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
