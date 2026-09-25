@@ -13,8 +13,9 @@ Two tracks run side by side, and both are always visible in the HUD:
   pad and towers, hull, beacons, habitat domes, and finally a rocket). Phase 5 launches the
   colony to a new planet.
 - **Terraforming** (planet track). Terraformers raise Heat, Pressure, Oxygen and Biomass;
-  their sum is the Terraform Index, which climbs through 8 stages. Stages change the world
-  (ice retreats, lakes fill, moss, grass, forests, birds, rain) and gate some research.
+  their sum is the Terraform Index, which climbs through 12 stages. Stages change the world
+  (ice retreats, clouds, lakes, rain, lichen, moss, grass, flowers and butterflies, forests,
+  flocks of birds), pay a reward, and gate some research.
 
 | Tier | Theme | Unlocked by | Target play time |
 | --- | --- | --- | --- |
@@ -55,11 +56,11 @@ A 53-step objective chain walks through all of it, then endless goals take over.
   with distance, power shards and 2 amplifiers.
 - **Deposits** have purity: impure 0.5×, normal 1×, pure 2× (richer further out).
 - **Day/night**: an 8-minute day. Solar follows it; working buildings light up at night.
-- **Weather and life**: snow while the air is thin, rain once there is water, birds over
-  grassland.
+- **Weather and life**: snow while the air is thin, clouds, rain once there is water,
+  lichen on bare rock, flowers and butterflies, and flocks of birds once wildlife thrives.
 - **Meteor showers**: from Ark phase 2, every ~12 minutes (6 on Ember), announced 30 s ahead.
 - **Economy**: the Recycler turns surplus into credits; the shop sells shards, amplifiers and
-  cosmetics (belt colours, Core trims). Achievements (32) also pay credits and shards.
+  cosmetics (belt colours, Core trims). Achievements (33) and every new stage also pay credits (and some, shards).
 - **Stats**: per-item made/used/delivered per minute; the problem view (eye button) shows
   power coverage and badges on stuck machines.
 - **Planets**: Glacia (start), Ember (warm start, scarce ice, lava highlands you can't build

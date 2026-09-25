@@ -114,6 +114,8 @@ export interface FrameParams {
   planet: number;
   /** Belt stripe colour. */
   stripe: Float32Array;
+  /** Terraforming stage plus progress towards the next (e.g. 5.4). */
+  stage: number;
 }
 
 type Tex = 'res' | 'kinds' | 'terrain' | 'atlas' | 'fog' | 'power';
@@ -167,6 +169,7 @@ export class Renderer {
       'u_overlay',
       'u_planet',
       'u_ambient',
+      'u_stage',
       'u_kindColor',
       'u_resColor',
     ]) {
@@ -385,6 +388,7 @@ export class Renderer {
     gl.uniform1f(this.u.gu_overlay, p.overlay);
     gl.uniform1i(this.u.gu_planet, p.planet);
     gl.uniform3fv(this.u.gu_ambient, p.ambient);
+    gl.uniform1f(this.u.gu_stage, p.stage);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     if (p.instances === 0) return;

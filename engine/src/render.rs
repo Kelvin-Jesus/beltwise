@@ -5,7 +5,7 @@
 //! among the small sprites so that, if the buffer ever fills up, what gets dropped is
 //! decoration rather than the factory.
 
-use crate::content::{BUILDINGS, Class, STAGES, bk};
+use crate::content::{BUILDINGS, Class, STAGES, bk, stage};
 use crate::machines::{EXIT, NO_RECIPE, status};
 use crate::sky::{AFTERGLOW, FALL_TICKS};
 use crate::types::{NONE, TICKS_PER_SEC};
@@ -60,6 +60,8 @@ pub mod sprite {
     /// param = wing phase.
     pub const BIRD: u8 = 139;
     pub const SHADOW: u8 = 140;
+    /// Tinted by the instance colour; param = wing phase.
+    pub const BUTTERFLY: u8 = 141;
 }
 
 const WHITE: u32 = 0xffff_ffff;
@@ -339,8 +341,8 @@ impl World {
         let area = w * h;
         // Precipitation comes and goes: snow while the air is thin, rain once there's water.
         let (kind, period, wet) = match stage {
-            1 | 2 => (sprite::SNOW, 420.0, 0.3),
-            s if s >= 3 => (sprite::RAIN, 540.0, 0.22),
+            s if s >= stage::WATER => (sprite::RAIN, 540.0, 0.22),
+            s if s >= stage::THIN_AIR => (sprite::SNOW, 420.0, 0.3),
             _ => (0, 1.0, 0.0),
         };
         let phase = (secs / period).fract();
@@ -359,9 +361,25 @@ impl World {
                 push(out, sprite_at(x, y, kind, 0, if kind == sprite::RAIN { 10 } else { 4 }, 0, WHITE));
             }
         }
-        // Birds cross the sky once there is grassland to nest in.
-        if stage >= 5 {
-            for f in 0..3u32 {
+        // Butterflies drift over the view once flowers bloom.
+        if stage >= stage::BLOOMING {
+            let n = ((area * 0.012) as usize).clamp(4, 28);
+            const WINGS: [u32; 4] = [0xff5c_a8f4, 0xff3c_c8fb, 0xffe8_e8ff, 0xfff4_8cc4];
+            for i in 0..n as u32 {
+                let hsh = hash(i, 0xb077);
+                let (ox, oy) = (unit(hsh), unit(hsh >> 8));
+                let speed = 0.25 + unit(hsh >> 16) * 0.3;
+                let a = secs * speed + i as f32;
+                let x = view[0] + (ox * w + a.sin() * 3.0 + secs * 0.2).rem_euclid(w);
+                let y = view[1] + (oy * h + (a * 1.3).cos() * 2.0).rem_euclid(h);
+                let flap = ((secs * 14.0 + i as f32).sin() * 127.0 + 128.0) as u8;
+                push(out, sprite_at(x, y, sprite::BUTTERFLY, 0, 5, flap, WINGS[i as usize % WINGS.len()]));
+            }
+        }
+        // Birds cross the sky once there is grassland to nest in; flocks, once wildlife thrives.
+        if stage >= stage::GRASSLAND {
+            let flocks = if stage >= stage::WILDLIFE { 3 } else { 1 };
+            for f in 0..flocks {
                 let flight = 70.0;
                 let lap = (secs / flight + f as f32 * 0.37).floor();
                 let t = (secs / flight + f as f32 * 0.37).fract();

@@ -156,6 +156,7 @@ export const Sprite = {
   Snow: 138,
   Bird: 139,
   Shadow: 140,
+  Butterfly: 141,
 } as const;
 export const ATLAS_COLS = 16;
 export const ATLAS_ROWS = 8;

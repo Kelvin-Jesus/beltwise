@@ -59,6 +59,7 @@ uniform float u_fx;        // effect level: 2 full, 1 reduced, 0 minimal
 uniform float u_overlay;   // power coverage overlay strength
 uniform int u_planet;      // 0 Glacia, 1 Ember, 2 Thalassa
 uniform vec3 u_ambient;    // daylight tint
+uniform float u_stage;     // terraforming stage + progress towards the next
 uniform vec3 u_kindColor[40];
 uniform vec3 u_resColor[10];
 out vec4 outColor;
@@ -109,8 +110,27 @@ vec3 terrain(vec2 world, float px) {
   float fertile = m * 0.7 + d * 0.2 + (1.0 - abs(e - 0.45) * 1.6) * 0.2;
   float veg = smoothstep(1.05 - life, 1.12 - life, fertile) * smoothstep(0.0, 0.06, life) * (1.0 - water) * (1.0 - ice);
   if (u_planet == 1) veg *= 1.0 - smoothstep(0.7, 0.735, T.r);
+  // Lichen: yellow-green crust on bare rock from the Lichen stage on.
+  float lichenAmt = clamp(u_stage - 5.0, 0.0, 1.0);
+  if (fx1 && lichenAmt > 0.0) {
+    float bare = (1.0 - water) * (1.0 - ice) * (1.0 - veg);
+    float crust = smoothstep(0.55 - 0.25 * lichenAmt, 0.7, texture(u_noise, world * 0.31).g * 0.6 + d * 0.4);
+    col = mix(col, vec3(0.52, 0.56, 0.28) + grain, crust * bare * 0.45 * zoomFade);
+  }
   vec3 grass = mix(vec3(0.18, 0.36, 0.14), vec3(0.36, 0.56, 0.22), d) + grain;
   col = mix(col, grass, veg);
+  // Flowers dot the grass from the Blooming stage on.
+  float bloom = clamp(u_stage - 8.0, 0.0, 1.0);
+  if (fx1 && bloom > 0.0 && veg > 0.5) {
+    vec2 cell = floor(world * 3.0);
+    float pick = hash01(cell + 91.0);
+    if (pick < 0.12 * bloom + 0.05) {
+      vec2 o = vec2(hash01(cell + 7.0), hash01(cell + 13.0)) * 0.6 + 0.2;
+      float petal = cover(length(fract(world * 3.0) - o) - 0.12, px * 3.0);
+      vec3 fc = pick < 0.05 ? vec3(0.98, 0.85, 0.3) : pick < 0.1 ? vec3(0.95, 0.55, 0.75) : vec3(0.95, 0.95, 1.0);
+      col = mix(col, fc, petal * zoomFade * 0.9);
+    }
+  }
   if (fx1 && life > 0.55 && veg > 0.5) {
     vec2 cell = floor(world * 2.0);
     vec2 o = vec2(hash01(cell + 17.0), hash01(cell + 41.0)) * 0.5 + 0.25;
@@ -124,7 +144,7 @@ vec3 terrain(vec2 world, float px) {
   // Cloud shadows once there is an atmosphere to hold them.
   if (fx2) {
     float cloud = smoothstep(0.55, 0.85, texture(u_noise, world * 0.0022 + vec2(u_time, u_time * 0.55) * 0.0013).b);
-    col *= 1.0 - cloud * u_terra.y * 0.22;
+    col *= 1.0 - cloud * max(u_terra.y, clamp(u_stage - 2.0, 0.0, 1.0) * 0.7) * 0.22;
   }
   return col;
 }
@@ -389,6 +409,15 @@ vec4 flash(vec2 p, float px, float age) {
   return vec4(c, 0.0);
 }
 
+vec4 butterfly(vec2 p, float px, float flap) {
+  float w = mix(0.35, 1.0, flap);
+  vec2 q = vec2(abs(p.x) / w, p.y);
+  float wings = min(sdCircle(q - vec2(0.2, -0.1), 0.19), sdCircle(q - vec2(0.16, 0.16), 0.13));
+  float body = sdBox(p, vec2(0.03, 0.2));
+  vec3 c = mix(vec3(0.08), vec3(1.0), cover(wings, px));
+  return vec4(c, 1.0) * max(cover(wings, px), cover(body, px));
+}
+
 vec4 bird(vec2 p, float px, float flap) {
   float w = mix(-0.12, 0.14, flap);
   float d = min(sdSegment(p, vec2(0.0, 0.05), vec2(-0.32, w)), sdSegment(p, vec2(0.0, 0.05), vec2(0.32, w))) - 0.045;
@@ -472,6 +501,8 @@ void main() {
     emissive = true;
   } else if (s == 139u) {
     c = bird(v_p, v_px, float(v_param) / 255.0);
+  } else if (s == 141u) {
+    c = butterfly(v_p, v_px, float(v_param) / 255.0);
   } else {
     // Soft shadow.
     float d = length(v_p) * 2.0;

@@ -79,6 +79,9 @@ export interface StageDef {
   name: string;
   desc: string;
   ti: number;
+  /** Paid once when the stage is reached. */
+  credits: number;
+  shards: number;
 }
 
 export interface MeterDef {

@@ -87,7 +87,7 @@
       #planet .ti small { font-size: 11px; color: var(--muted); font-weight: 500; }
       #ti-rate { font-size: 11px; color: var(--good); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
       #stage-name { color: #86efac; }
-      #perf { margin-top: 6px; font: 10px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); white-space: pre; text-align: left; }
+      #perf { position: fixed; z-index: 3; left: calc(8px + var(--safe-l)); top: calc(92px + var(--safe-t)); padding: 6px 9px; font: 10.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); white-space: pre; pointer-events: none; }
       #actions { display: flex; flex-direction: column; gap: 8px; }
       .round {
         position: relative;
@@ -289,7 +289,8 @@
       .stages { list-style: none; margin: 0; padding: 0; }
       .stages li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 10px; opacity: 0.6; }
       .stages li small { display: block; color: var(--muted); font-size: 12px; }
-      .stages li span { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+      .stages li span { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; text-align: right; }
+      .stages li span em { display: block; font-style: normal; font-size: 11px; color: var(--accent); }
       .stages li.reached { opacity: 0.85; }
       .stages li.reached b::after { content: ' ✓'; color: var(--good); }
       .stages li.current { opacity: 1; background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.35); }
@@ -407,12 +408,12 @@
       .btn.big { font-size: 17px; padding: 12px 42px; border-radius: 14px; }
       .btn.ghost { background: transparent; border-color: rgba(255, 255, 255, 0.2); }
       @keyframes float { 50% { transform: translateY(-8px) rotate(-2deg); } }
-      body.title #top, body.title #buildbar, body.title .fab, body.title #selection { opacity: 0; pointer-events: none; }
+      body.title #top, body.title #buildbar, body.title .fab, body.title #selection, body.title #perf { opacity: 0; pointer-events: none; }
 
       /* ---- Launch cinematic ---- */
       #launch { position: fixed; inset: 0; z-index: 25; pointer-events: none; opacity: 0; transition: opacity 0.4s; }
       body.launching #launch { opacity: 1; }
-      body.launching #top, body.launching #buildbar, body.launching .fab, body.launching #selection { opacity: 0; }
+      body.launching #top, body.launching #buildbar, body.launching .fab, body.launching #selection, body.launching #perf { opacity: 0; }
       #launch-rocket { --t: 0; position: absolute; left: 50%; top: 50%; width: 26px; height: 70px; margin: -35px 0 0 -13px; transform: translateY(calc(var(--t) * var(--t) * -120vh)); }
       #launch-rocket::before { content: ''; position: absolute; inset: 0; border-radius: 50% 50% 8px 8px; background: linear-gradient(90deg, #cbd5e1, #f8fafc 45%, #94a3b8); box-shadow: 0 0 0 2px #0b1016; }
       #launch-rocket i { position: absolute; left: 3px; right: 3px; top: 64px; height: calc(40px + var(--t) * 160px); border-radius: 50%; background: radial-gradient(ellipse at top, #fff7ed, #fb923c 40%, rgba(239, 68, 68, 0) 70%); filter: blur(1px); }
@@ -454,7 +455,6 @@
         <div class="bar"><i id="stage-bar"></i></div>
         <div id="power" title="Power use / available"></div>
         <div id="shower" hidden></div>
-        <div id="perf" hidden></div>
       </section>
       <nav id="actions" aria-label="Game menu">
         <button id="btn-research" class="round" type="button" aria-label="Research" title="Research (T)"><span id="research-badge" class="badge" hidden></span></button>
@@ -465,6 +465,7 @@
       </nav>
     </header>
 
+    <div id="perf" class="card" hidden></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <div id="selection" class="card" hidden></div>
     <div id="selrect" hidden></div>

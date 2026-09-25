@@ -387,7 +387,10 @@ export class Sheets {
       .map((st, i) => {
         const unlocks = content.tech.filter((t) => t.stage === i && i > 0).map((t) => t.name);
         const cls = i < stage ? 'reached' : i === stage ? 'current' : '';
-        return `<li class="${cls}"><div><b>${st.name}</b><small>${st.desc}${unlocks.length ? ` Unlocks research: ${unlocks.join(', ')}.` : ''}</small></div><span>${i === 0 ? '' : formatCount(st.ti) + ' Ti'}</span></li>`;
+        const reward = [st.credits ? `${formatCount(st.credits)} cr` : '', st.shards ? `${st.shards} shard${st.shards > 1 ? 's' : ''}` : '']
+          .filter(Boolean)
+          .join(' + ');
+        return `<li class="${cls}"><div><b>${st.name}</b><small>${st.desc}${unlocks.length ? ` Unlocks research: ${unlocks.join(', ')}.` : ''}</small></div><span>${i === 0 ? '' : formatCount(st.ti) + ' Ti'}${reward ? `<em>${reward}</em>` : ''}</span></li>`;
       })
       .join('');
     const planet = content.planets[s[Stat.Planet]];

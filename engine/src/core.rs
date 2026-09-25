@@ -264,6 +264,9 @@ impl Core {
         self.ti = self.meters.iter().sum();
         while (self.stage as usize) + 1 < STAGES.len() && self.ti >= STAGES[self.stage as usize + 1].ti {
             self.stage += 1;
+            let reward = &STAGES[self.stage as usize];
+            self.credits += reward.credits as u64;
+            self.stored[it::POWER_SHARD as usize] += reward.shards as u32;
             self.revision += 1;
         }
     }

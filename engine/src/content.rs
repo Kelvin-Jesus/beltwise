@@ -987,7 +987,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Unlocks the Melter: ice into water.",
         cost: &[(STEEL, 20), (GLASS, 15)],
         requires: &[STEELMAKING],
-        stage: 1,
+        stage: stage::WARMING,
         effects: &[Effect::Unlock(bk::MELTER)],
         ..T
     },
@@ -997,7 +997,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Unlocks the Vaporizer, which thickens the atmosphere.",
         cost: &[(CIRCUIT, 20), (STEEL, 20)],
         requires: &[ELECTRONICS],
-        stage: 1,
+        stage: stage::WARMING,
         tier: 2,
         effects: &[Effect::Unlock(bk::VAPORIZER)],
         ..T
@@ -1026,7 +1026,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Unlocks the Bio Lab: algae and fertilizer.",
         cost: &[(CIRCUIT, 30), (GLASS, 30), (WATER, 20)],
         requires: &[MELTING],
-        stage: 2,
+        stage: stage::THIN_AIR,
         tier: 2,
         effects: &[Effect::Unlock(bk::BIOLAB)],
         ..T
@@ -1037,7 +1037,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Unlocks the Oxygenator.",
         cost: &[(ALGAE, 20), (MOTOR, 20)],
         requires: &[BIOLOGY],
-        stage: 2,
+        stage: stage::THIN_AIR,
         tier: 2,
         effects: &[Effect::Unlock(bk::OXYGENATOR)],
         ..T
@@ -1058,7 +1058,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Unlocks the Greenhouse, the biggest step towards life.",
         cost: &[(FERTILIZER, 30), (MOTOR, 20), (GLASS, 30)],
         requires: &[OXYGEN],
-        stage: 3,
+        stage: stage::WATER,
         tier: 3,
         effects: &[Effect::Unlock(bk::GREENHOUSE)],
         ..T
@@ -1109,7 +1109,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Unlocks the Thermal Core, a fuel-rod furnace for massive Heat.",
         cost: &[(FUEL_ROD, 30), (FRAME, 30)],
         requires: &[NUCLEAR],
-        stage: 5,
+        stage: stage::GRASSLAND,
         tier: 5,
         effects: &[Effect::Unlock(bk::THERMAL)],
         ..T
@@ -1185,7 +1185,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Unlocks the Water Pump for the new lakes.",
         cost: &[(REINFORCED_PLATE, 20), (MOTOR, 20)],
         requires: &[REINFORCED, MELTING],
-        stage: 3,
+        stage: stage::WATER,
         tier: 2,
         effects: &[Effect::Unlock(bk::WATER_PUMP)],
         ..T
@@ -1265,7 +1265,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Bio Labs can germinate seeds; unlocks the Pollinator Hive.",
         cost: &[(FERTILIZER, 60), (COMPUTER, 20), (FRAME, 10)],
         requires: &[GREENHOUSES, TITANIUM],
-        stage: 4,
+        stage: stage::MOSS,
         tier: 4,
         effects: &[Effect::Unlock(bk::HIVE)],
         ..T
@@ -1276,7 +1276,7 @@ pub const TECH: [TechDef; TECH_COUNT] = [
         desc: "Unlocks the Hatchery to bring the lakes to life.",
         cost: &[(SEEDS, 60), (FRAME, 30), (COMPUTER, 30)],
         requires: &[POLLINATORS],
-        stage: 5,
+        stage: stage::GRASSLAND,
         tier: 4,
         effects: &[Effect::Unlock(bk::HATCHERY)],
         ..T
@@ -1410,17 +1410,44 @@ pub struct StageDef {
     pub desc: &'static str,
     /// Terraform Index needed to reach this stage.
     pub ti: u64,
+    /// Paid once when the stage is reached.
+    pub credits: u32,
+    pub shards: u8,
 }
 
-pub const STAGES: [StageDef; 8] = [
-    StageDef { name: "Barren", desc: "A frozen rock under a thin, dusty sky.", ti: 0 },
-    StageDef { name: "Warming", desc: "The ice caps begin to retreat.", ti: 2_500 },
-    StageDef { name: "Thin Air", desc: "A real atmosphere starts to hold.", ti: 25_000 },
-    StageDef { name: "Liquid Water", desc: "Meltwater pools in the lowlands.", ti: 125_000 },
-    StageDef { name: "Moss", desc: "The first green spreads across damp ground.", ti: 500_000 },
-    StageDef { name: "Grassland", desc: "Plains turn green, and the first birds arrive.", ti: 2_000_000 },
-    StageDef { name: "Forest", desc: "Forests take root.", ti: 7_500_000 },
-    StageDef { name: "Living Planet", desc: "A breathing world. What will you build next?", ti: 25_000_000 },
+/// Stage indices.
+pub mod stage {
+    pub const BARREN: u8 = 0;
+    pub const WARMING: u8 = 1;
+    pub const THIN_AIR: u8 = 2;
+    pub const CLOUDS: u8 = 3;
+    pub const WATER: u8 = 4;
+    pub const LICHEN: u8 = 5;
+    pub const MOSS: u8 = 6;
+    pub const GRASSLAND: u8 = 7;
+    pub const BLOOMING: u8 = 8;
+    pub const FOREST: u8 = 9;
+    pub const WILDLIFE: u8 = 10;
+    pub const LIVING: u8 = 11;
+}
+
+const fn st(name: &'static str, desc: &'static str, ti: u64, credits: u32, shards: u8) -> StageDef {
+    StageDef { name, desc, ti, credits, shards }
+}
+
+pub const STAGES: [StageDef; 12] = [
+    st("Barren", "A frozen rock under a thin, dusty sky.", 0, 0, 0),
+    st("Warming", "The ice caps begin to retreat.", 2_500, 100, 0),
+    st("Thin Air", "A real atmosphere starts to hold. Snow drifts down.", 25_000, 200, 0),
+    st("Clouds", "Clouds gather and drift over the land.", 60_000, 300, 0),
+    st("Liquid Water", "Meltwater pools in the lowlands, and the first rain falls.", 125_000, 500, 1),
+    st("Lichen", "Hardy lichen crusts the bare rock.", 250_000, 700, 0),
+    st("Moss", "The first green spreads across damp ground.", 500_000, 1_000, 1),
+    st("Grassland", "Plains turn green, and the first birds arrive.", 2_000_000, 2_000, 1),
+    st("Blooming", "Flowers open, and butterflies drift between them.", 4_000_000, 3_000, 1),
+    st("Forest", "Forests take root.", 7_500_000, 5_000, 1),
+    st("Wildlife", "Flocks fill the sky and fish crowd the lakes.", 14_000_000, 8_000, 2),
+    st("Living Planet", "A breathing world. What will you build next?", 25_000_000, 20_000, 3),
 ];
 
 pub const METER_NAMES: [&str; meter::COUNT] = ["Heat", "Pressure", "Oxygen", "Biomass"];
@@ -1471,7 +1498,7 @@ pub const OBJECTIVES: [ObjectiveDef; 53] = [
     o("Deliver gears", Goal::Deliver(GEAR, 40), &[(IRON_INGOT, 50)]),
     o("Research Steelmaking", Goal::Research(STEELMAKING), &[(STONE, 50)]),
     o("Deliver steel", Goal::Deliver(STEEL, 40), &[(GEAR, 20)]),
-    o("Reach the Warming stage", Goal::ReachStage(1), &[(STEEL, 20)]),
+    o("Reach the Warming stage", Goal::ReachStage(stage::WARMING), &[(STEEL, 20)]),
     o("Research Electronics", Goal::Research(ELECTRONICS), &[(COPPER_WIRE, 50)]),
     o("Deliver circuits", Goal::Deliver(CIRCUIT, 50), &[(STEEL, 30)]),
     o("Deliver motors", Goal::Deliver(MOTOR, 30), &[(CIRCUIT, 20)]),
@@ -1479,13 +1506,13 @@ pub const OBJECTIVES: [ObjectiveDef; 53] = [
     o("Research Reinforced Plates", Goal::Research(REINFORCED), &[(STEEL, 40)]),
     o("Deliver reinforced plates", Goal::Deliver(REINFORCED_PLATE, 40), &[(MOTOR, 10)]),
     o("Research Vaporization", Goal::Research(VAPOR), &[(CIRCUIT, 20)]),
-    o("Reach the Thin Air stage", Goal::ReachStage(2), &[(CIRCUIT, 30), (STEEL, 30)]),
+    o("Reach the Thin Air stage", Goal::ReachStage(stage::THIN_AIR), &[(CIRCUIT, 30), (STEEL, 30)]),
     o("Research Silicon", Goal::Research(SILICON), &[(SAND, 60)]),
     o("Build 4 Solar Panels", Goal::Build(bk::SOLAR, 4), &[(SILICON, 20)]),
     o("Research Biology", Goal::Research(BIOLOGY), &[(GLASS, 30)]),
     o("Deliver algae", Goal::Deliver(ALGAE, 40), &[(MOTOR, 10)]),
     o("Research Oxygenation", Goal::Research(OXYGEN), &[(CIRCUIT, 40)]),
-    o("Reach the Liquid Water stage", Goal::ReachStage(3), &[(STEEL, 60)]),
+    o("Reach the Liquid Water stage", Goal::ReachStage(stage::WATER), &[(STEEL, 60)]),
     o("Complete the Ark's Hull", Goal::Ark(2), &[(POWER_SHARD, 1), (REINFORCED_PLATE, 40)]),
     o("Research Oil Processing", Goal::Research(OIL), &[(REINFORCED_PLATE, 20)]),
     o("Deliver plastic", Goal::Deliver(PLASTIC, 60), &[(CIRCUIT, 40)]),
@@ -1494,20 +1521,20 @@ pub const OBJECTIVES: [ObjectiveDef; 53] = [
     o("Research Radar and build one", Goal::Build(bk::RADAR, 1), &[(REINFORCED_PLATE, 20)]),
     o("Salvage a wreck", Goal::Salvage(1), &[(COMPUTER, 5)]),
     o("Research Greenhouses", Goal::Research(GREENHOUSES), &[(FERTILIZER, 20)]),
-    o("Reach the Moss stage", Goal::ReachStage(4), &[(COMPUTER, 10)]),
+    o("Reach the Moss stage", Goal::ReachStage(stage::MOSS), &[(COMPUTER, 10)]),
     o("Complete the Ark's Systems", Goal::Ark(3), &[(AMPLIFIER, 1), (COMPUTER, 20)]),
     o("Research Titanium", Goal::Research(TITANIUM), &[(MOTOR, 20)]),
     o("Deliver titanium plates", Goal::Deliver(TITANIUM_PLATE, 60), &[(COMPUTER, 10)]),
     o("Deliver frames", Goal::Deliver(FRAME, 30), &[(TITANIUM_PLATE, 40)]),
     o("Research Pollinators and build a Hive", Goal::Build(bk::HIVE, 1), &[(SEEDS, 20)]),
-    o("Reach the Grassland stage", Goal::ReachStage(5), &[(FRAME, 20)]),
+    o("Reach the Grassland stage", Goal::ReachStage(stage::GRASSLAND), &[(FRAME, 20)]),
     o("Complete the Ark's Habitat", Goal::Ark(4), &[(POWER_SHARD, 2), (FRAME, 20)]),
     o("Research Nuclear", Goal::Research(NUCLEAR), &[(STEEL, 100)]),
     o("Deliver fuel rods", Goal::Deliver(FUEL_ROD, 20), &[(FRAME, 10)]),
     o("Build a Reactor", Goal::Build(bk::REACTOR, 1), &[(FUEL_ROD, 10)]),
     o("Research Xenometallurgy", Goal::Research(XENO), &[(COMPUTER, 20)]),
     o("Deliver alien alloy", Goal::Deliver(ALIEN_ALLOY, 20), &[(FUEL_ROD, 10)]),
-    o("Reach the Forest stage", Goal::ReachStage(6), &[(FRAME, 40)]),
+    o("Reach the Forest stage", Goal::ReachStage(stage::FOREST), &[(FRAME, 40)]),
     o("Deliver quantum cores", Goal::Deliver(QUANTUM_CORE, 5), &[(ALIEN_ALLOY, 20)]),
     o("Launch the Ark", Goal::Ark(5), &[]),
 ];
@@ -1581,7 +1608,7 @@ const fn a(
     AchDef { key, name, desc, cond, credits, shards }
 }
 
-pub const ACHIEVEMENTS: [AchDef; 32] = [
+pub const ACHIEVEMENTS: [AchDef; 33] = [
     a("first", "First Delivery", "Deliver an item to the Core.", Cond::Delivered(1), 50, 0),
     a("line", "Assembly Line", "Run 10 machines.", Cond::Machines(10), 100, 0),
     a("industry", "Industrialist", "Run 100 machines.", Cond::Machines(100), 500, 0),
@@ -1591,10 +1618,11 @@ pub const ACHIEVEMENTS: [AchDef; 32] = [
     a("rate1", "Full Throttle", "Deliver 450 items per minute.", Cond::Rate(450), 500, 0),
     a("rate2", "Torrent", "Deliver 2,000 items per minute.", Cond::Rate(2000), 3000, 1),
     a("million", "Millionaire", "Deliver a million items in total.", Cond::Delivered(1_000_000), 10000, 1),
-    a("warm", "Warm Welcome", "Reach the Warming stage.", Cond::Stage(1), 200, 0),
-    a("rain", "Rainmaker", "Reach the Liquid Water stage.", Cond::Stage(3), 1000, 0),
-    a("green", "Green Thumb", "Reach the Grassland stage.", Cond::Stage(5), 3000, 1),
-    a("gaia", "Gaia", "Bring the planet to life.", Cond::Stage(7), 20000, 2),
+    a("warm", "Warm Welcome", "Reach the Warming stage.", Cond::Stage(stage::WARMING), 200, 0),
+    a("rain", "Rainmaker", "Reach the Liquid Water stage.", Cond::Stage(stage::WATER), 1000, 0),
+    a("green", "Green Thumb", "Reach the Grassland stage.", Cond::Stage(stage::GRASSLAND), 3000, 1),
+    a("bloom", "Butterfly Effect", "Reach the Blooming stage.", Cond::Stage(stage::BLOOMING), 4000, 0),
+    a("gaia", "Gaia", "Bring the planet to life.", Cond::Stage(stage::LIVING), 20000, 2),
     a("scholar", "Scholar", "Research 10 technologies.", Cond::Researched(10), 300, 0),
     a("polymath", "Polymath", "Research every technology at least once.", Cond::AllResearch, 10000, 1),
     a("power", "Power Up", "Build a Coal Generator.", Cond::Built(bk::COAL_GEN, 1), 100, 0),
@@ -1937,7 +1965,11 @@ pub fn content_json() -> String {
     });
     s.push_str(",\"stages\":");
     list(&mut s, &STAGES, |s, _, d| {
-        let _ = write!(s, "{{\"name\":\"{}\",\"desc\":\"{}\",\"ti\":{}}}", d.name, d.desc, d.ti);
+        let _ = write!(
+            s,
+            "{{\"name\":\"{}\",\"desc\":\"{}\",\"ti\":{},\"credits\":{},\"shards\":{}}}",
+            d.name, d.desc, d.ti, d.credits, d.shards
+        );
     });
     s.push_str(",\"meters\":");
     list(&mut s, &METER_NAMES, |s, i, name| {

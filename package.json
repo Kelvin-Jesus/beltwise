@@ -1,6 +1,6 @@
 {
   "name": "beltwise",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
   "description": "A tiny, fast, touch-first factory automation game. Rust/Wasm simulation, WebGL2 instanced renderer.",
   "type": "module",

@@ -8,10 +8,10 @@ and plays offline.
 - **Factory:** 35 buildings turn 9 raw resources (including oil and meteorites) into 26 products, from iron plates to quantum cores. Pick recipes per machine, unlock alternates, overclock with power shards, double output with amplifiers.
 - **Power:** the Core powers its surroundings; poles, coal, solar, fuel and nuclear generators and batteries carry the rest. A short grid slows machines down instead of breaking them.
 - **The Ark:** a five-phase megaproject that unlocks each new tier and, finally, launches your colony to a new planet (Glacia, Ember, Thalassa) with a permanent production bonus.
-- **Terraforming:** eight stages of a planet coming back to life: ice retreats, lakes fill, rain and snow, moss, grass, forests and birds.
+- **Terraforming:** twelve stages of a planet coming back to life: ice retreats, clouds gather, lakes fill, rain and snow, lichen, moss, grass, flowers and butterflies, forests and birds. Every stage pays credits (and sometimes power shards).
 - **Exploration:** fog of war, radar, and 24 wrecks of the first expedition with supplies, a story told in 10 logs, and data probes that unlock alternate recipes.
 - **Tools that save time:** blueprints (copy, paste, rotate, share codes), drones for long hauls, per-item production stats, a power and problem overlay, full refunds and undo.
-- **Always a next step:** a 53-step objective chain, 32 achievements, a shop, repeatable research and endless goals. The factory keeps producing while the game is closed.
+- **Always a next step:** a 53-step objective chain, 33 achievements, a shop, repeatable research and endless goals. The factory keeps producing while the game is closed.
 - **Offline PWA:** install it to your home screen and it runs fullscreen without a connection. Autosaves; you can export and import saves (older saves still load).
 - **Fast:** a 32k-belt, 43k-item, 4.4k-machine factory with a live power grid costs about 0.2 ms of simulation per frame, and the renderer uses 2 draw calls per frame at any size. Frame-rate cap (30/60/120/Max) and quality presets in the menu; an in-game benchmark measures your device.
 

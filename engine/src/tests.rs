@@ -408,8 +408,11 @@ fn heaters_raise_heat_and_stages() {
     assert_eq!(w.core.stage, 0);
     w.core.add_meters(&[2_500, 0, 0, 0]);
     assert_eq!(w.core.stage, 1);
+    let credits = w.core.credits;
     w.core.add_meters(&[0, 130_000, 0, 0]);
-    assert_eq!(w.core.stage, 3, "stages can be skipped in one step");
+    assert_eq!(w.core.stage, crate::content::stage::WATER, "stages can be skipped in one step");
+    let paid: u64 = (2..=4).map(|s| crate::content::STAGES[s].credits as u64).sum();
+    assert_eq!(w.core.credits, credits + paid, "every stage passed pays its reward");
 }
 
 #[test]
@@ -1219,8 +1222,11 @@ fn content_tables_are_consistent() {
         }
     }
     assert!(alts.iter().all(|&n| n == 1), "{alts:?}");
+    let stages = crate::content::STAGES.len();
+    assert!(TECH.iter().all(|t| (t.stage as usize) < stages));
     for o in &OBJECTIVES {
         match o.goal {
+            Goal::ReachStage(s) => assert!((s as usize) < stages),
             Goal::Build(k, _) => assert!((k as usize) < BUILDINGS.len()),
             Goal::Deliver(item, _) => assert!((item as usize) < ITEM_COUNT),
             Goal::Research(t) => assert!((t as usize) < TECH_COUNT),

@@ -646,6 +646,7 @@ async function main(): Promise<void> {
     overlay: 0,
     planet: 0,
     stripe,
+    stage: 0,
   };
   const level = (v: number, full: number) =>
     Math.min(1, Math.max(0, (Math.log10(1 + v) - 2) / (Math.log10(full) - 2)));
@@ -734,6 +735,11 @@ async function main(): Promise<void> {
     fp.fx = fx;
     fp.overlay = hud.overlay ? 1 : powerTool ? 0.75 : 0;
     fp.planet = s[Stat.Planet];
+    const stageNow = s[Stat.Stage];
+    const here = content.stages[stageNow];
+    const next = content.stages[stageNow + 1];
+    const into = next ? Math.min(1, Math.max(0, (engine.stat64(Stat.TiLo) - here.ti) / (next.ti - here.ti))) : 0;
+    fp.stage += (stageNow + into - fp.stage) * ease;
     stripe.set(stripeColors[s[Stat.BeltColor]] ?? stripeColors[0]);
     renderer.draw(fp);
     const t3 = performance.now();
@@ -830,7 +836,13 @@ async function main(): Promise<void> {
     const stage = s[Stat.Stage];
     if (stage > lastStage) {
       const st = content.stages[stage];
-      hud.toast(`<b>${st.name}</b> · ${st.desc}`, 'epic', 6000);
+      const reward = [
+        st.credits ? `+${formatCount(st.credits)} credits` : '',
+        st.shards ? `${icons.img(36, 18)} +${st.shards} power shard${st.shards > 1 ? 's' : ''}` : '',
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      hud.toast(`<b>${st.name}</b> · ${st.desc}${reward ? ` · ${reward}` : ''}`, 'epic', 6000);
       sound.play('stage');
     }
     const ach = s[Stat.LastAch];
