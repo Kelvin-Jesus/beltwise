@@ -10,6 +10,8 @@ use crate::world::World;
 pub const DAY_TICKS: u32 = 8 * 60 * TICKS_PER_SEC;
 /// A new game starts in the early morning.
 const DAY_OFFSET: u32 = DAY_TICKS * 28 / 100;
+/// The first noon (demo scenes are set in full daylight).
+pub const NOON: u32 = DAY_TICKS / 2 - DAY_OFFSET;
 /// Meteors take this long from first glimpse to impact.
 pub const FALL_TICKS: u32 = 90;
 /// Impacts stay visible (flash and smoke) for this long.

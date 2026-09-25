@@ -580,7 +580,7 @@ impl World {
 
     // ---- Machine settings (inspector) -----------------------------------------------------------
 
-    fn machine_at(&self, x: i32, y: i32) -> Option<usize> {
+    pub(crate) fn machine_at(&self, x: i32, y: i32) -> Option<usize> {
         let t = self.grid.index(x, y);
         if t == NONE || self.grid.ent[t as usize] == NONE {
             return None;
@@ -649,7 +649,9 @@ impl World {
         if !self.sandbox && have < need {
             return false;
         }
-        self.core.stored[it::POWER_SHARD as usize] = have - need + m.shards.saturating_sub(n) as u32;
+        // Sandbox installs shards it doesn't have: never below zero.
+        self.core.stored[it::POWER_SHARD as usize] =
+            have.saturating_sub(need) + m.shards.saturating_sub(n) as u32;
         let mut m = m;
         m.shards = n;
         self.machines.configure(&mut m);
@@ -968,7 +970,9 @@ impl World {
         }
         self.tick_drones();
         self.tick_radars();
-        self.machines.settle_power(self.core_net, CORE_POWER);
+        // Demo maps may have no Core (it sits off the map): then it supplies nothing.
+        let core_supply = if self.core.x >= 0 { CORE_POWER } else { 0 };
+        self.machines.settle_power(self.core_net, core_supply);
         let gain = core::mem::take(&mut self.machines.meter_gain);
         if gain != [0; meter::COUNT] {
             self.core.add_meters(&gain);

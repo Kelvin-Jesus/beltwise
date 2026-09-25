@@ -15,6 +15,7 @@ and plays offline.
 - **Terraforming:** twelve stages of a planet coming back to life: ice retreats, clouds gather, lakes fill, rain and snow, lichen, moss, grass, flowers and butterflies, forests and birds. Every stage pays credits (and sometimes power shards).
 - **Exploration:** fog of war, radar, and 24 wrecks of the first expedition with supplies, a story told in 10 logs, and data probes that unlock alternate recipes.
 - **Tools that save time:** blueprints (copy, paste, rotate, share codes), drones for long hauls, per-item production stats, a power and problem overlay, full refunds and undo.
+- **Learn by watching:** a guide of short lessons, and a codex page for every item and building: what it's for, what makes it, what uses it. Each one plays a live demo on request: the game builds the scene on a second, tiny engine instance and renders it right in the page. Tap the objective, an item in the Core, or the **?** on a building card.
 - **Always a next step:** a 53-step objective chain, 33 achievements, a shop, repeatable research and endless goals. The factory keeps producing while the game is closed.
 - **Offline PWA:** install it to your home screen and it runs fullscreen without a connection. Autosaves; you can export and import saves (older saves still load).
 - **Fast:** a 32k-belt, 43k-item, 4.4k-machine factory with a live power grid costs about 0.2 ms of simulation per frame, and the renderer uses 2 draw calls per frame at any size. Frame-rate cap (30/60/120/Max) and quality presets in the menu; an in-game benchmark measures your device.
@@ -78,6 +79,7 @@ takes about 33 µs.
 | Power and problem view | eye button | `O` |
 | Tools | build bar | `1`–`9`, `Tab` switches category, `Q` move, `Esc` |
 | Panels | top-right buttons | `T` research, `K` Ark, `C` core, `P` planet, `F` fullscreen, `F3` stats |
+| Guide and codex | tap the objective, an item in the Core, or **?** on a building | `H` |
 
 A touch only commits once it moves past a 10 px slop or lifts, so starting a pinch never
 places a stray building.
@@ -127,13 +129,16 @@ engine/src/
   render.rs      culled, level-of-detail instance buffer (lights, weather, drones)
   save.rs        binary save format (versioned, validated, deterministic; loads v1)
   worldgen.rs    terrain fields, deposits with purity, wrecks
-  lib.rs         the C ABI; tests.rs has 50 tests and a benchmark
+  demo.rs        blank sandbox maps for the guide's live demos
+  lib.rs         the C ABI; tests.rs has 55 tests and a benchmark
 web/src/
   main.ts        loop, LOD, frame pacing, events, blueprints, launch cinematic
   engine.ts      Wasm loading, views, save/load
   renderer.ts    WebGL2 passes and textures;  shaders.ts  GLSL
   icons.ts       procedural Canvas2D art for every item and building
   hud.ts         cards, build bar, selection card;  panels.ts  every sheet
+  codex.ts       the guide's lessons and the codex pages
+  scenes.ts      demo scenes, built from the recipe tables;  demo.ts  plays them live
   input.ts       touch / mouse / keyboard;  camera.ts  settings.ts  title.ts
   blueprints.ts  save.ts  audio.ts  pwa.ts  bench.ts
 web/sw.js        service worker template;  web/public/  icons, logo and manifest
@@ -145,7 +150,8 @@ docs/DESIGN.md   design intent behind the numbers
 
 Add the item or building to `content.rs`: its id, its name, and recipes or costs. Hook it
 into the research tree and give it an icon function in `icons.ts`. The UI (build bar,
-research, inspector, core storage) picks it up from the engine's JSON automatically.
+research, inspector, core storage, codex and its demos) picks it up from the engine's JSON
+automatically; add a line about it to `ITEM_NOTES` or `BUILDING_TIPS` in `codex.ts`.
 `content_tables_are_consistent` checks the tables for mistakes.
 
 ## Roadmap ideas

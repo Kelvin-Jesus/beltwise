@@ -1,7 +1,8 @@
 use crate::content::{
-    ACHIEVEMENTS, ALT_BASE, ALT_COUNT, ARK, BUILDINGS, Class, FREE, Goal, ITEM_COUNT, OBJECTIVES, SHOP, TECH,
-    TECH_COUNT, bk, it, meter, tech,
+    ACHIEVEMENTS, ALT_BASE, ALT_COUNT, ARK, BUILDINGS, Class, FREE, Goal, ITEM_COUNT, OBJECTIVES, SHOP,
+    STORAGE_CAP, TECH, TECH_COUNT, bk, it, meter, tech,
 };
+use crate::demo::option as demo_option;
 use crate::machines::{ENTRANCE, EXIT, FULL, NO_RECIPE, status};
 use crate::render::lod;
 use crate::types::{MIN_GAP, NONE, SUB, dir};
@@ -1243,6 +1244,90 @@ fn content_tables_are_consistent() {
     assert!(
         json.contains("\"thermal\"") && json.contains("\"Living Planet\"") && json.contains("\"Launch\"")
     );
+}
+
+// ---- Demo scenes ----------------------------------------------------------------------------
+
+fn demo(core: (i32, i32), options: u32) -> World {
+    World::new_demo(64, 40, 0, core, options, [0; meter::COUNT])
+}
+
+#[test]
+fn demo_world_is_blank_explored_and_unlocked() {
+    let w = demo((-1, -1), demo_option::FREE_POWER);
+    assert!(w.machines.list.is_empty(), "no wrecks");
+    assert!(w.grid.res.iter().all(|&r| r == 0), "no deposits");
+    assert!(w.grid.kind.iter().all(|&k| k == bk::EMPTY), "no Core when it is off the map");
+    assert!(w.grid.seen.iter().all(|&s| s == 255));
+    assert!(w.sandbox && w.machines.free_power);
+    assert_eq!(crate::sky::daylight(w.tick), FULL, "scenes play at noon");
+    let fogged = demo((30, 18), demo_option::FOG);
+    assert!(fogged.grid.seen.iter().all(|&s| s == 0));
+    assert_eq!(fogged.grid.kind.iter().filter(|&&k| k == bk::CORE).count(), 16);
+    assert_eq!((fogged.core.x, fogged.core.y), (30, 18));
+    assert!(!fogged.machines.free_power);
+
+    // The helpers refuse to touch a real game.
+    let mut real = campaign();
+    assert!(!real.demo_ore(10, 10, it::IRON_ORE, 1));
+    assert!(!real.demo_ground(10, 10, 0));
+    assert!(!real.demo_wreck(10, 10));
+}
+
+#[test]
+fn demo_source_never_runs_dry_and_feeds_a_chain() {
+    let mut w = demo((40, 18), demo_option::FREE_POWER);
+    assert!(w.place(20, 20, bk::STORAGE, dir::E));
+    assert!(w.demo_source(20, 20, it::IRON_ORE));
+    belt_line(&mut w, 21, 20, 2, dir::E);
+    assert!(w.place(23, 20, bk::SMELTER, dir::E));
+    belt_line(&mut w, 24, 20, 16, dir::E);
+    run(&mut w, 1200);
+    let s = machine_at(&w, 20, 20);
+    assert_eq!(w.machines.list[s as usize].aux, STORAGE_CAP, "a supply never empties");
+    assert!(w.core.delivered[it::IRON_INGOT as usize] >= 10, "the chain reaches the Core");
+    assert!(!w.demo_source(23, 20, it::COAL), "only storages become supplies");
+}
+
+#[test]
+fn demo_speed_runs_machines_faster() {
+    let made = |pct: u32| {
+        let mut w = demo((-1, -1), demo_option::FREE_POWER);
+        assert!(w.place(20, 20, bk::STORAGE, dir::E));
+        assert!(w.demo_source(20, 20, it::IRON_ORE));
+        assert!(w.place(21, 20, bk::SMELTER, dir::E));
+        belt_line(&mut w, 22, 20, 3, dir::E);
+        assert!(w.place(25, 20, bk::INCINERATOR, dir::E));
+        w.demo_speed(pct);
+        run(&mut w, 900);
+        w.machines.incinerated
+    };
+    let (normal, fast) = (made(100), made(300));
+    assert!(normal >= 12 && fast >= normal * 5 / 2, "{normal} vs {fast}");
+}
+
+#[test]
+fn demo_lakes_hold_water_once_the_planet_is_wet() {
+    let wet = [90_000, 70_000, 0, 0];
+    let mut w = World::new_demo(64, 40, 0, (-1, -1), demo_option::FREE_POWER, wet);
+    for (x, y) in [(20, 20), (21, 20), (20, 21), (21, 21)] {
+        assert!(w.demo_ground(x, y, 0));
+    }
+    assert!(w.place(20, 20, bk::WATER_PUMP, dir::E), "pumps go on the pond");
+    assert!(!w.place(24, 20, bk::WATER_PUMP, dir::E), "not on dry land");
+    let mut dry = demo((-1, -1), demo_option::FREE_POWER);
+    dry.demo_ground(20, 20, 0);
+    assert!(!dry.place(20, 20, bk::WATER_PUMP, dir::E), "a frozen planet has no lakes");
+}
+
+#[test]
+fn sandbox_shards_need_no_stock() {
+    let mut w = world();
+    deposit(&mut w, 30, 30, it::IRON_ORE);
+    assert!(w.place(30, 30, bk::DRILL, dir::E));
+    w.core.stored[it::POWER_SHARD as usize] = 0;
+    assert!(w.set_shards(30, 30, 3));
+    assert_eq!(w.core.stored[it::POWER_SHARD as usize], 0, "never below zero");
 }
 
 #[test]

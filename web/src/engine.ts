@@ -74,6 +74,39 @@ export interface Exports {
   fx_sandbox(on: number): void;
   fx_sandbox_meters(heat: number, pressure: number, oxygen: number, biomass: number): void;
   fx_sandbox_grant(n: number, ark: number): void;
+  fx_demo(
+    planet: number,
+    coreX: number,
+    coreY: number,
+    options: number,
+    heat: number,
+    pressure: number,
+    oxygen: number,
+    biomass: number,
+  ): void;
+  fx_demo_ore(x: number, y: number, item: number, purity: number): number;
+  fx_demo_ground(x: number, y: number, elevation: number): number;
+  fx_demo_source(x: number, y: number, item: number): number;
+  fx_demo_speed(pct: number): void;
+  fx_demo_wreck(x: number, y: number): number;
+}
+
+let compiled: Promise<WebAssembly.Module> | null = null;
+
+/** Compiles the engine once; every instance (the game, the guide's demos) shares it. */
+function compile(): Promise<WebAssembly.Module> {
+  compiled ??= (async () => {
+    // Resolved against this module's URL, so it works under any GitHub Pages sub-path.
+    const url = new URL(__WASM_FILE__, import.meta.url);
+    const init: RequestInit = __DEV__ ? { cache: 'no-store' } : {};
+    try {
+      return await WebAssembly.compileStreaming(fetch(url, init));
+    } catch {
+      // Servers that don't send `application/wasm` break streaming compilation.
+      return WebAssembly.compile(await (await fetch(url, init)).arrayBuffer());
+    }
+  })();
+  return compiled;
 }
 
 export class Engine {
@@ -104,18 +137,9 @@ export class Engine {
     this.content = JSON.parse(json) as Content;
   }
 
+  /** A new engine instance with its own world (each has its own linear memory). */
   static async load(width: number, height: number, seed: number): Promise<Engine> {
-    // Resolved against this module's URL, so it works under any GitHub Pages sub-path.
-    const url = new URL(__WASM_FILE__, import.meta.url);
-    const init: RequestInit = __DEV__ ? { cache: 'no-store' } : {};
-    let instance: WebAssembly.Instance;
-    try {
-      ({ instance } = await WebAssembly.instantiateStreaming(fetch(url, init), {}));
-    } catch {
-      // Servers that don't send `application/wasm` break streaming compilation.
-      const bytes = await (await fetch(url, init)).arrayBuffer();
-      ({ instance } = await WebAssembly.instantiate(bytes, {}));
-    }
+    const instance = await WebAssembly.instantiate(await compile(), {});
     const x = instance.exports as unknown as Exports;
     if (x.fx_abi() !== ABI_VERSION) {
       throw new Error(`Engine ABI ${x.fx_abi()} does not match the UI (${ABI_VERSION}). Reload to update.`);

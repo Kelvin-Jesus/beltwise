@@ -9,6 +9,7 @@ pub mod belts;
 pub mod blueprint;
 pub mod content;
 pub mod core;
+pub mod demo;
 pub mod drones;
 pub mod explore;
 pub mod machines;
@@ -31,7 +32,7 @@ use types::NONE;
 use world::World;
 
 /// Bumped whenever an export's signature or a shared memory layout changes.
-pub const ABI_VERSION: u32 = 3;
+pub const ABI_VERSION: u32 = 4;
 pub const INFO_LEN: usize = 24;
 
 /// Everything the exports touch. Single-threaded Wasm has exactly one instance.
@@ -623,4 +624,51 @@ pub extern "C" fn fx_sandbox_grant(n: u32, ark: u32) {
     w.fog_dirty = [0, 0, w.grid.w, w.grid.h];
     w.fog_rev += 1;
     w.update_stats();
+}
+
+// ---- Demo scenes (the guide runs these on its own engine instance) ------------------------------
+
+/// Replaces the world with a blank demo map of the same size (see `World::new_demo`). A
+/// Core position off the map (e.g. -1, -1) means no Core; `options`: see `demo::option`.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn fx_demo(
+    planet: u32,
+    core_x: i32,
+    core_y: i32,
+    options: u32,
+    heat: f64,
+    pressure: f64,
+    oxygen: f64,
+    biomass: f64,
+) {
+    let s = state();
+    let (w, h) = (s.world.grid.w, s.world.grid.h);
+    let meters = [heat, pressure, oxygen, biomass].map(|v| v.max(0.0) as u64);
+    s.world = World::new_demo(w, h, planet.min(255) as u8, (core_x, core_y), options, meters);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fx_demo_ore(x: i32, y: i32, item: u32, purity: u32) -> u32 {
+    game().demo_ore(x, y, item.min(255) as u8, purity.min(255) as u8) as u32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fx_demo_ground(x: i32, y: i32, elevation: u32) -> u32 {
+    game().demo_ground(x, y, elevation.min(255) as u8) as u32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fx_demo_source(x: i32, y: i32, item: u32) -> u32 {
+    game().demo_source(x, y, item.min(255) as u8) as u32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fx_demo_speed(pct: u32) {
+    game().demo_speed(pct);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn fx_demo_wreck(x: i32, y: i32) -> u32 {
+    game().demo_wreck(x, y) as u32
 }

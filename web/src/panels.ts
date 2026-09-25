@@ -1,6 +1,7 @@
 // Sheets: research, the Ark, planet, core (storage, production, power), menu, shop,
-// achievements, journal, blueprints, wrecks and the building inspector. One sheet is open
-// at a time; while open it re-renders at 2 Hz so counts and affordability stay live.
+// achievements, journal, blueprints, wrecks, the building inspector, and the guide and codex
+// (codex.ts). One sheet is open at a time; while open it re-renders at 2 Hz so counts and
+// affordability stay live (the guide's pages are static, and host the live demo player).
 
 import { Found, Info, MachineFlag, NO_RECIPE, NONE, Stat } from './constants';
 import {
@@ -13,9 +14,12 @@ import {
   type RecipeDef,
   type Stack,
 } from './content';
+import { Codex, type CodexPage } from './codex';
+import type { DemoPlayer } from './demo';
 import type { Engine } from './engine';
 import { SVG, canAfford, costChips, knownItems, recipeOpen } from './hud';
 import { buildingIcon, type Icons } from './icons';
+import { sceneFor } from './scenes';
 
 export type SheetKind =
   | 'research'
@@ -30,7 +34,8 @@ export type SheetKind =
   | 'shop'
   | 'achievements'
   | 'journal'
-  | 'blueprints';
+  | 'blueprints'
+  | 'codex';
 
 export interface MenuState {
   sound: boolean;
@@ -84,12 +89,17 @@ export class Sheets {
   private infoHtml = '';
   private lastHtml = '';
   private coreTab: 'storage' | 'production' | 'power' = 'storage';
+  private readonly codex: Codex;
+  private page: CodexPage = { view: 'guide' };
+  private history: CodexPage[] = [];
 
   constructor(
     private readonly engine: Engine,
     private readonly icons: Icons,
     private readonly actions: PanelActions,
+    private readonly demo: DemoPlayer,
   ) {
+    this.codex = new Codex(engine, icons);
     $('sheet-close').addEventListener('click', () => this.close());
     $('sheet-backdrop').addEventListener('click', () => this.close());
     $('sheet-body').addEventListener('click', (e) => {
@@ -98,6 +108,12 @@ export class Sheets {
       const act = b.dataset.act!;
       const [name, value] = act.split(':');
       switch (name) {
+        case 'cx':
+          this.navigate(act.slice(3));
+          return;
+        case 'demo':
+          this.demoAction(act.slice(5), b);
+          return;
         case 'research':
           actions.research(Number(value));
           break;
@@ -145,6 +161,7 @@ export class Sheets {
   open(kind: SheetKind, at?: [number, number]): void {
     if (at) this.inspectAt = at;
     const fresh = this.kind !== kind;
+    if (kind !== 'codex' || fresh) this.demo.stop();
     this.kind = kind;
     $('sheet').hidden = false;
     $('sheet-backdrop').hidden = kind === 'inspect';
@@ -154,6 +171,7 @@ export class Sheets {
   }
 
   close(): void {
+    this.demo.stop();
     this.kind = null;
     $('sheet').hidden = true;
     $('sheet-backdrop').hidden = true;
@@ -166,9 +184,66 @@ export class Sheets {
     this.open('info');
   }
 
+  /** Opens a guide or codex page; `Back` returns to the page it came from. */
+  openCodex(page: CodexPage): void {
+    if (this.kind === 'codex') this.history.push(this.page);
+    else this.history = [];
+    if (this.history.length > 30) this.history.shift();
+    this.page = page;
+    this.demo.stop();
+    this.open('codex');
+    $('sheet-body').scrollTop = 0;
+  }
+
+  /** Guide and codex links: `item:I`, `bld:K`, `topic:ID`, `guide`, `codex`, `back`. */
+  private navigate(target: string): void {
+    const [view, id] = target.split(':');
+    if (view === 'back') {
+      const prev = this.history.pop();
+      if (!prev) return;
+      this.page = prev;
+      this.demo.stop();
+      this.render(true);
+      $('sheet-body').scrollTop = 0;
+      return;
+    }
+    const page: CodexPage | null =
+      view === 'item'
+        ? { view: 'item', id: Number(id) }
+        : view === 'bld'
+          ? { view: 'building', id: Number(id) }
+          : view === 'topic'
+            ? { view: 'topic', id }
+            : view === 'guide' || view === 'codex'
+              ? { view }
+              : null;
+    if (page) this.openCodex(page);
+  }
+
+  /** Plays a scene in the page's demo slot, or controls the player (`replay`, `stop`). */
+  private demoAction(arg: string, button: HTMLElement): void {
+    const body = $('sheet-body');
+    const clear = () => body.querySelectorAll('.play.on, .opt.on').forEach((el) => el.classList.remove('on'));
+    if (arg === 'replay') return this.demo.replay();
+    if (arg === 'stop') {
+      this.demo.stop();
+      clear();
+      return;
+    }
+    const scene = sceneFor(this.content, arg);
+    const slot = button.closest<HTMLElement>('.demo-slot') ?? body.querySelector<HTMLElement>('.demo-slot');
+    if (!scene || !slot) return;
+    clear();
+    if (!button.classList.contains('demo-poster')) button.classList.add('on');
+    void this.demo.play(arg, scene, slot);
+    slot.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
   /** Re-renders the open sheet (called at 2 Hz and after actions). */
   render(force = false): void {
     if (!this.kind) return;
+    // Guide pages hold nothing live; rebuilding them would only churn strings.
+    if (this.kind === 'codex' && !force) return;
     let title = '';
     let html = '';
     switch (this.kind) {
@@ -228,6 +303,9 @@ export class Sheets {
         title = this.infoTitle;
         html = this.infoHtml;
         break;
+      case 'codex':
+        [title, html] = this.codex.render(this.page, this.history.length > 0);
+        break;
     }
     if (!force && html === this.lastHtml) return;
     this.lastHtml = html;
@@ -236,6 +314,12 @@ export class Sheets {
     const scroll = body.scrollTop;
     body.innerHTML = html;
     body.scrollTop = scroll;
+    // A demo keeps playing across a redraw of its own page.
+    if (this.demo.playing) {
+      const slot = body.querySelector<HTMLElement>('.demo-slot');
+      if (this.kind === 'codex' && slot) this.demo.attach(slot);
+      else this.demo.stop();
+    }
   }
 
   private stack(item: number, n: number | string, size = 20): string {
@@ -273,8 +357,13 @@ export class Sheets {
         if (t.tier !== tier || t.repeat) return;
         const state = engine.x.fx_tech_state(i);
         const unlocks =
-          t.unlocks.map((k) => icons.img(buildingIcon(k), 28, content.buildings[k].name)).join('') +
-          t.recipes.map(([b, r]) => icons.img(content.buildings[b].recipes[r].output[0], 26, recipeName(content, content.buildings[b].recipes[r]))).join('');
+          t.unlocks.map((k) => `<button class="tech-link" type="button" data-act="cx:bld:${k}" title="${content.buildings[k].name}">${icons.img(buildingIcon(k), 28, content.buildings[k].name)}</button>`).join('') +
+          t.recipes
+            .map(([b, r]) => {
+              const rc = content.buildings[b].recipes[r];
+              return `<button class="tech-link" type="button" data-act="cx:item:${rc.output[0]}" title="${recipeName(content, rc)}">${icons.img(rc.output[0], 26, recipeName(content, rc))}</button>`;
+            })
+            .join('');
         if (state === 2) {
           done.push(`<div class="tech done">${unlocks}<b>${t.name}</b></div>`);
           return;
@@ -415,9 +504,9 @@ export class Sheets {
     const storage = engine.storage;
     const s = engine.stats;
     const cells = content.items
-      .map((it, i) => (i > 0 && storage[i] > 0 ? `<div class="cell">${this.icons.img(i, 36)}<b>${formatCount(storage[i])}</b><small>${it.name}</small></div>` : ''))
+      .map((it, i) => (i > 0 && storage[i] > 0 ? `<button class="cell" type="button" data-act="cx:item:${i}" title="What is ${it.name} for?">${this.icons.img(i, 36)}<b>${formatCount(storage[i])}</b><small>${it.name}</small></button>` : ''))
       .join('');
-    return `<p class="hint">Everything belted into the Core lands here. It pays for buildings, research and the Ark.
+    return `<p class="hint">Everything belted into the Core lands here. It pays for buildings, research and the Ark. Tap an item to see what it’s for.
       Delivering <b>${formatCount(s[Stat.Rate])}</b> items/min · <b>${formatCount(engine.credits)}</b> credits.</p><div class="storage">${cells || '<p>Empty.</p>'}</div>`;
   }
 
@@ -473,6 +562,11 @@ export class Sheets {
     const achieved = this.content.achievements.filter((_, i) => this.engine.hasAchievement(i)).length;
     const probes = s[Stat.Probes];
     return `<div class="menu">
+      <h3>Learn</h3>
+      <div class="grid2">
+        ${btn('cx:guide', 'Guide <small>lessons + demos</small>')}
+        ${btn('cx:codex', 'Codex <small>items, buildings</small>')}
+      </div>
       <h3>Progress</h3>
       <div class="grid2">
         ${btn('open:achievements', `Achievements <small>${achieved}/${this.content.achievements.length}</small>`)}
@@ -484,7 +578,7 @@ export class Sheets {
       <h3>Game</h3>
       <div class="row">${btn('save', 'Save now')}${btn('export', 'Export save')}${btn('import', 'Import save')}</div>
       <p class="hint">Autosaves every 30 seconds and when you leave. ${m.lastSave}</p>
-      <div class="row">${btn('help', 'How to play')}${btn('new', 'New planet', 'data-danger')}</div>
+      <div class="row">${btn('new', 'New planet', 'data-danger')}</div>
       <h3>Graphics</h3>
       <div class="field"><span>Frame rate</span>${seg('fps', m.fps, [[30, '30'], [60, '60'], [120, '120'], [0, 'Max']])}</div>
       <p class="hint">${fpsHint}</p>
@@ -719,23 +813,8 @@ export class Sheets {
       <div class="inspect-head">${icons.img(buildingIcon(kind), 44)}<div><b>${b.name}</b><small class="status s${status}">${STATUS[status] ?? ''}</small></div></div>
       ${parts.join('')}
       ${info[Info.Progress] ? `<div class="bar"><i style="width:${pct}%"></i></div>` : ''}
-      <div class="row"><button class="btn" data-act="i:rotate">Rotate</button><button class="btn" data-act="i:remove" data-danger>Remove</button></div>
+      <div class="row"><button class="btn" data-act="i:rotate">Rotate</button><button class="btn" data-act="cx:bld:${kind}">How it works</button><button class="btn" data-act="i:remove" data-danger>Remove</button></div>
     </div>`;
     return [b.name, html];
   }
 }
-
-/** Short first-run guide, also reachable from the menu. */
-export const HELP_HTML = `<div class="help">
-  <p><b>Welcome to Beltwise.</b> You landed on a frozen world with a Core. Build a factory, then use it to bring the planet to life and launch the Ark.</p>
-  <ol>
-    <li><b>Extract:</b> pick <i>Drill</i> (Extraction tab) and tap an ore deposit. It outputs in the arrow's direction; <i>Rotate</i> turns the next building.</li>
-    <li><b>Belt:</b> drag with <i>Belt</i> (Logistics tab) from the drill to a <i>Smelter</i>, then on to the <b>Core</b>. Corners are automatic.</li>
-    <li><b>Spend:</b> the Core stores everything. Materials pay for new buildings and <b>Research</b> (flask button).</li>
-    <li><b>Power:</b> the Core powers machines near it. Further out, <i>Power Poles</i> carry it; generators add more.</li>
-    <li><b>Explore:</b> building pushes back the fog. Tap wrecks to salvage supplies, stories and new designs.</li>
-    <li><b>Terraform and launch:</b> Heaters, Vaporizers, Greenhouses and more raise the Terraform Index; the <b>Ark</b> (rocket button) unlocks new tiers and, finally, a new planet.</li>
-  </ol>
-  <p>Two fingers pan and zoom. Tap a building with <i>Move</i> to inspect it. The eye button shows power coverage and stuck machines. Removing a building refunds it; <i>Undo</i> reverts your last gesture.</p>
-</div>`;
-

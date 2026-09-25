@@ -66,6 +66,23 @@ A 53-step objective chain walks through all of it, then endless goals take over.
 - **Planets**: Glacia (start), Ember (warm start, scarce ice, lava highlands you can't build
   on, twice the meteors), Thalassa (frozen sea, few islands). Each launch: +10% production.
 
+## Guide and live demos
+
+- The guide has twelve short lessons; the codex has a page for every item (what it's for,
+  every way to make it, every use, what it pays for) and every building (how to use it,
+  recipes, cost, unlock). "What makes it" and "what uses it" are computed from the recipe
+  tables, so new content documents itself.
+- Any page plays a live demo on request. A second engine instance (the same compiled Wasm
+  module, a 64x40 map) builds the scene with sandbox rules and the game's own renderer
+  draws it into a canvas in the page: an item's maker belting it into a user, a building at
+  work, or a lesson built step by step with captions. Supplies and sinks sit just past the
+  edge of the view, so belts run in and out of frame like part of a larger factory.
+- Demo maps copy the player's planet, stage and belt colour, so they look like their world.
+  Slow recipes play faster (the speed shows in a corner); lakes appear only in scenes that
+  need water. The demo only ticks while its page is open, and costs well under 0.1 ms a frame.
+- Help is one tap away: the objective card opens the lesson or page for the current goal,
+  items in the Core open their page, and building cards and the inspector have a **?**.
+
 ## Performance budget
 
 Simulation stays O(segments + machines) per tick with no allocation; passive buildings

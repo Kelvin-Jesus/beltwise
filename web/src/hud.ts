@@ -30,6 +30,10 @@ export interface HudHandlers {
   onPlaceOption(recipe: number, filter: number): void;
   /** Blueprint actions from the selection card. */
   onBlueprint(action: 'save' | 'cancel'): void;
+  /** Help with the current objective. */
+  onObjective(): void;
+  /** The codex page of a building (the ? on the selection card). */
+  onHelp(kind: number): void;
 }
 
 const svg = (d: string, extra = '') => `<svg viewBox="0 0 24 24" ${extra}>${d}</svg>`;
@@ -144,6 +148,7 @@ export class Hud {
     $('btn-menu').addEventListener('click', () => h.onOpen('menu'));
     $('btn-fullscreen').addEventListener('click', () => h.onFullscreen());
     $('planet').addEventListener('click', () => h.onOpen('planet'));
+    $('objective').addEventListener('click', () => h.onObjective());
     $('undo').addEventListener('click', () => h.onUndo());
     $('rotate').addEventListener('click', () => h.onRotate());
     $('overlay').addEventListener('click', () => h.onOverlay());
@@ -181,6 +186,9 @@ export class Hud {
         h.onPlaceOption(NO_RECIPE, this.placeFilter);
       } else if (act === 'bp') {
         h.onBlueprint(v as 'save' | 'cancel');
+      } else if (act === 'help') {
+        h.onHelp(Number(v));
+        return;
       }
       this.last.selection = '\u0000';
     });
@@ -378,7 +386,7 @@ export class Hud {
     if (tool >= 0) {
       const b = content.buildings[tool];
       const power = b.power && b.class !== 'battery' ? `<span class="chip power">${SVG.bolt}${b.class === 'generator' ? '+' : ''}${formatPower(b.power)}</span>` : '';
-      sel = `${icons.img(buildingIcon(tool), 28)}<div class="sel-main"><b>${b.name}</b><small>${b.desc}</small></div><div class="sel-cost">${power}${costChips(icons, storage, b.cost, content)}</div>`;
+      sel = `${icons.img(buildingIcon(tool), 28)}<div class="sel-main"><b>${b.name}</b><small>${b.desc}</small></div><div class="sel-cost">${power}${costChips(icons, storage, b.cost, content)}</div><button class="sel-help" type="button" data-sel="help:${tool}" title="How it works" aria-label="How it works">?</button>`;
       const options: string[] = [];
       if (b.class === 'crafter' && b.recipes.length > 1) {
         const current = this.placeRecipe.get(tool) ?? NO_RECIPE;

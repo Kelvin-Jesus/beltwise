@@ -8,6 +8,7 @@ import { Blueprints } from './blueprints';
 import { Camera } from './camera';
 import {
   Found,
+  GoalKind,
   Kind,
   Lod,
   MAX_STEPS_PER_FRAME,
@@ -22,11 +23,12 @@ import {
   WORLD_SIZE,
 } from './constants';
 import { BELT_COLORS, formatCount } from './content';
+import { DemoPlayer } from './demo';
 import { Engine } from './engine';
 import { Hud } from './hud';
 import { buildingIcon, Icons } from './icons';
 import { Input } from './input';
-import { HELP_HTML, Sheets } from './panels';
+import { Sheets } from './panels';
 import { Pwa } from './pwa';
 import { hexToRgb, Renderer, type FrameParams } from './renderer';
 import { Saves } from './save';
@@ -115,7 +117,42 @@ async function main(): Promise<void> {
       if (name === null) return;
       hud.toast(library.add(name || 'Blueprint', blueprint) ? `Saved <b>${name}</b> to your blueprints` : 'Could not save (storage full)', 'good');
     },
+    onObjective: () => {
+      sound.play('click');
+      objectiveHelp();
+    },
+    onHelp: (kind) => {
+      sound.play('click');
+      sheets.openCodex({ view: 'building', id: kind });
+    },
   });
+
+  /** Tapping the objective: the lesson, page or sheet that helps with it. */
+  const objectiveHelp = (): void => {
+    const s = engine.stats;
+    const a = s[Stat.GoalA];
+    if (s[Stat.Objective] < 3) return sheets.openCodex({ view: 'topic', id: 'start' });
+    switch (s[Stat.GoalKind]) {
+      case GoalKind.Build:
+        return sheets.openCodex({ view: 'building', id: a });
+      case GoalKind.Deliver:
+        return sheets.openCodex({ view: 'item', id: a });
+      case GoalKind.Research:
+        return sheets.open('research');
+      case GoalKind.Ark:
+        return sheets.open('ark');
+      case GoalKind.Salvage:
+        return sheets.openCodex({ view: 'topic', id: 'explore' });
+      default:
+        return sheets.openCodex({ view: 'topic', id: 'terraform' });
+    }
+  };
+
+  // Live demos for the guide: a second, tiny engine instance drawn into the guide sheet.
+  const demo = new DemoPlayer(engine, icons, () => ({
+    fx: settings.effects,
+    ratio: settings.maxPixelRatio(window.devicePixelRatio || 1),
+  }));
 
   const activateBlueprint = (bytes: Uint8Array): void => {
     const cells = engine.loadBlueprint(bytes);
@@ -279,7 +316,7 @@ async function main(): Promise<void> {
       }
     },
     blueprints: () => library.all(),
-  });
+  }, demo);
 
   const selectTool = (tool: number): void => {
     if (tool === TOOL_PASTE && !blueprint) tool = TOOL_COPY;
@@ -390,6 +427,7 @@ async function main(): Promise<void> {
       else if (k === 'c') sheets.open('core');
       else if (k === 'p') sheets.open('planet');
       else if (k === 'k') sheets.open('ark');
+      else if (k === 'h') sheets.openCodex({ view: 'guide' });
       else if (k === 'f3' || k === '`') hud.togglePerf();
       else if (k === 'tab') hud.setCategory((hud.category + (e.shiftKey ? 4 : 1)) % 5);
       else if (k >= '1' && k <= '9') {
@@ -425,7 +463,7 @@ async function main(): Promise<void> {
   let selection: [number, number, number, number] | null = null;
   hud.setTool(TOOL_MOVE);
   hud.setDirection(0);
-  if (__DEV__) Object.assign(window, { fx: { engine, cam, renderer, input, hud, sheets, library } });
+  if (__DEV__) Object.assign(window, { fx: { engine, cam, renderer, input, hud, sheets, library, demo } });
 
   const worldChanged = (): void => {
     renderer.uploadWorld();
@@ -528,7 +566,7 @@ async function main(): Promise<void> {
         }
         break;
       case 'help':
-        sheets.showInfo('How to play', HELP_HTML);
+        sheets.openCodex({ view: 'guide' });
         break;
       case 'fullscreen':
         await pwa.toggleFullscreen();
@@ -621,10 +659,10 @@ async function main(): Promise<void> {
   const title = new Title(!firstRun && savedAt !== null, {
     onPlay() {
       sound.play('click');
-      if (firstRun) sheets.showInfo('How to play', HELP_HTML);
+      if (firstRun) sheets.openCodex({ view: 'topic', id: 'start' });
       else welcomeBack();
     },
-    onHelp: () => sheets.showInfo('How to play', HELP_HTML),
+    onHelp: () => sheets.openCodex({ view: 'guide' }),
   });
   if (params.has('bench') || params.has('notitle')) title.hide();
 
@@ -742,6 +780,7 @@ async function main(): Promise<void> {
     fp.stage += (stageNow + into - fp.stage) * ease;
     stripe.set(stripeColors[s[Stat.BeltColor]] ?? stripeColors[0]);
     renderer.draw(fp);
+    if (demo.playing) demo.frame(dt, now);
     const t3 = performance.now();
 
     if (selection) {

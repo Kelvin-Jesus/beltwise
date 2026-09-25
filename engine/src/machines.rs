@@ -35,6 +35,8 @@ pub mod flag {
     pub const LOCKED: u8 = 1;
     /// An amplifier is installed: double output, four times the power.
     pub const AMP: u8 = 2;
+    /// Demo scenes only: a Storage that never runs out (an off-screen supply).
+    pub const SOURCE: u8 = 4;
 }
 
 /// What a machine is doing (`Machine::status`), for the inspector and the problem overlay.
@@ -270,6 +272,8 @@ pub struct Machines {
     pub daylight: u32,
     /// Machines outside any network run anyway (sandbox and tests).
     pub free_power: bool,
+    /// Extra speed for every machine, in percent (demo scenes play slow recipes faster).
+    pub demo_pct: u32,
     /// Unlocked recipes per building (bit per recipe index).
     pub recipes_unlocked: [u32; BUILDING_COUNT],
     /// Terraforming points produced since the core last drained them.
@@ -300,6 +304,7 @@ impl Default for Machines {
             heater_mult: 1,
             daylight: FULL,
             free_power: false,
+            demo_pct: 100,
             recipes_unlocked: [0; BUILDING_COUNT],
             meter_gain: [0; meter::COUNT],
             incinerated: 0,
@@ -376,7 +381,7 @@ impl Machines {
             _ => 100,
         };
         let clock = CLOCK_PCT[m.shards.min(3) as usize];
-        m.speed = (SPEED_ONE * pct * clock / 10_000).clamp(1, u16::MAX as u32) as u16;
+        m.speed = (SPEED_ONE * pct * clock / 10_000 * self.demo_pct / 100).clamp(1, u16::MAX as u32) as u16;
         m.draw = match def.class {
             Class::Generator => def.power * self.power_pct / 100 * clock / 100,
             Class::Battery => 0,
@@ -823,7 +828,7 @@ impl Machines {
                 }
                 m.held = it::NONE;
             }
-            Class::Storage => {
+            Class::Storage if m.flags & flag::SOURCE == 0 => {
                 m.aux -= 1;
                 if m.aux == 0 {
                     m.held = it::NONE;

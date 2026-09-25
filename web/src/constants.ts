@@ -2,7 +2,7 @@
 // Game content (items, buildings, research...) is NOT duplicated here: it comes from the
 // engine as JSON at start-up (see content.ts).
 
-export const ABI_VERSION = 3;
+export const ABI_VERSION = 4;
 
 export const WORLD_SIZE = 512;
 export const TICK_MS = 1000 / 60;
