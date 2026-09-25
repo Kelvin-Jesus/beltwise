@@ -1,3 +1,7 @@
+<p align="center"><img src="design/logos/beltwise-banner.png" alt="Beltwise" width="720"></p>
+
+<p align="center"><b><a href="https://kelvin-jesus.github.io/beltwise/">Play in your browser</a></b> · installs as an app · works offline</p>
+
 # Beltwise
 
 Build a factory on a frozen planet, then use it to bring the planet back to life.
@@ -132,7 +136,8 @@ web/src/
   hud.ts         cards, build bar, selection card;  panels.ts  every sheet
   input.ts       touch / mouse / keyboard;  camera.ts  settings.ts  title.ts
   blueprints.ts  save.ts  audio.ts  pwa.ts  bench.ts
-web/sw.js        service worker template;  web/public/  icons and manifest
+web/sw.js        service worker template;  web/public/  icons, logo and manifest
+design/logos/    the logo sheet and make-icons.sh, which builds every icon from it
 docs/DESIGN.md   design intent behind the numbers
 ```
 

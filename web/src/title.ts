@@ -9,18 +9,6 @@ export interface TitleHandlers {
   onHelp(): void;
 }
 
-/** Placeholder mark until the final logo lands: a half-frozen, half-green planet ringed by a belt. */
-export const LOGO_SVG = `<svg viewBox="0 0 120 120" aria-hidden="true">
-  <defs><clipPath id="lg-p"><circle cx="60" cy="60" r="30"/></clipPath></defs>
-  <g clip-path="url(#lg-p)"><rect x="20" y="20" width="80" height="80" fill="#7dd3fc"/><path d="M60 20h40v80H60c10-12 10-28 0-40s-10-28 0-40z" fill="#34d399"/></g>
-  <circle cx="60" cy="60" r="30" fill="none" stroke="#0b1016" stroke-width="3"/>
-  <ellipse cx="60" cy="62" rx="52" ry="17" fill="none" stroke="#1f2937" stroke-width="12" transform="rotate(-18 60 62)"/>
-  <ellipse cx="60" cy="62" rx="52" ry="17" fill="none" stroke="#f59e0b" stroke-width="4" stroke-dasharray="7 9" transform="rotate(-18 60 62)"/>
-  <path d="M60 29a31 31 0 0 1 0 62" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
-  <rect x="98" y="42" width="11" height="11" rx="2" fill="#f59e0b" stroke="#0b1016" stroke-width="2" transform="rotate(-18 103 47)"/>
-  <rect x="10" y="68" width="10" height="10" rx="2" fill="#f59e0b" stroke="#0b1016" stroke-width="2" transform="rotate(-18 15 73)"/>
-</svg>`;
-
 export class Title {
   visible = true;
   private t = 0;
@@ -29,8 +17,8 @@ export class Title {
   constructor(hasSave: boolean, h: TitleHandlers) {
     this.el = document.getElementById('title')!;
     this.el.innerHTML = `<div class="title-inner">
-      <div class="title-logo">${LOGO_SVG}</div>
-      <h1>Beltwise</h1>
+      <img class="title-mark" src="logo-mark.webp" width="384" height="384" alt="" draggable="false">
+      <h1><img class="title-word" src="logo-wordmark.webp" width="681" height="156" alt="Beltwise" draggable="false"></h1>
       <p class="tagline">Build a factory. Wake a frozen world. Launch the Ark.</p>
       <button class="btn primary big" id="title-play">${hasSave ? 'Continue' : 'Land'}</button>
       <button class="btn ghost" id="title-help">How to play</button>

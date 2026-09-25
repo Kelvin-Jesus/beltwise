@@ -11,7 +11,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Beltwise</title>
     <!-- Every URL is relative so the build works from any GitHub Pages sub-path. -->
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="icon-180.png" />
     <link rel="manifest" href="manifest.webmanifest" />
     <style>
@@ -402,8 +403,9 @@
       #title { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at center, rgba(10, 14, 20, 0.25), rgba(10, 14, 20, 0.85)); transition: opacity 0.45s; }
       #title.out { opacity: 0; pointer-events: none; }
       .title-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-      .title-logo svg { width: min(46vw, 190px); height: auto; filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.6)); animation: float 6s ease-in-out infinite; }
-      #title h1 { margin: 0; font-size: clamp(40px, 11vw, 68px); letter-spacing: 0.02em; font-weight: 800; background: linear-gradient(180deg, #ffffff, #cbd5e1); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .title-mark { width: min(44vw, 180px); height: auto; border-radius: 22%; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06); animation: float 6s ease-in-out infinite; }
+      #title h1 { margin: 4px 0 0; line-height: 0; }
+      .title-word { width: min(78vw, 380px); height: auto; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.5)); }
       .tagline { margin: 0 0 10px; color: #cbd5e1; font-size: 15px; }
       .btn.big { font-size: 17px; padding: 12px 42px; border-radius: 14px; }
       .btn.ghost { background: transparent; border-color: rgba(255, 255, 255, 0.2); }

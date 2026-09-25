@@ -5,5 +5,3 @@
 .DS_Store
 *.log
 /.claude
-# Rendered previews of logo concepts (the SVG sources are kept).
-/design/logos/*.png
