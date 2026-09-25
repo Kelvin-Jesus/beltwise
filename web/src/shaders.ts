@@ -271,9 +271,12 @@ ${common}
 const vec3 RAIL = vec3(0.12, 0.13, 0.16);
 const vec3 BELT = vec3(0.21, 0.23, 0.27);
 
+// Belts fill their tile, so a belt always touches its neighbours (and whatever it merges
+// into); the rails, darkening into a thin seam at the very edge, keep parallel lines apart.
 vec4 belt(uint spr, vec2 p, float px) {
   float s, l;
-  if (spr == 128u) {
+  bool straight = spr == 128u;
+  if (straight) {
     s = p.x + 0.5;
     l = p.y;
   } else {
@@ -283,11 +286,12 @@ vec4 belt(uint spr, vec2 p, float px) {
     s = atan(v.x, -v.y) * 0.63661977;
   }
   float e = abs(l);
-  vec3 c = mix(RAIL, BELT, cover(e - 0.36, px));
+  vec3 c = mix(RAIL, BELT, cover(e - 0.38, px));
+  c *= 1.0 - 0.4 * smoothstep(0.45, 0.5, e);
   float stripe = fract((s - u_phase) * 2.0 + e * 0.9);
   float chev = smoothstep(0.0, 0.08, stripe) * (1.0 - smoothstep(0.22, 0.30, stripe));
   c = mix(c, u_stripe, chev * cover(e - 0.30, px));
-  return vec4(c, 1.0) * cover(e - 0.46, px);
+  return vec4(c, 1.0) * (straight ? 1.0 : cover(e - 0.5, px));
 }
 
 // The Core fills the inner 4/5 of its quad; the Ark grows around and on top of it.
@@ -469,6 +473,14 @@ void main() {
     }
   } else if (s <= 130u) {
     c = belt(s, v_p, v_px);
+    if (v_param > 0u) {
+      // A stub of belt running under the building it feeds or leaves (render.rs): the
+      // building is ahead (+x), or behind when flagged; between two machines, both.
+      float len = float(v_param) / 255.0;
+      float x = (v_extra & 1u) != 0u ? -v_p.x : v_p.x;
+      float back = (v_extra & 2u) != 0u ? len : 0.04;
+      c *= cover(max(-back - x, x - len), v_px);
+    }
   } else if (s == 131u) {
     c = core(v_p, v_px, float(v_param) / 255.0, v_extra & 7u, (v_extra >> 3u) & 3u, v_color.r);
     outColor = vec4(c.rgb * u_ambient, c.a);

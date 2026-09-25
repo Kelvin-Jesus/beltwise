@@ -6,9 +6,9 @@
 //! decoration rather than the factory.
 
 use crate::content::{BUILDINGS, Class, STAGES, bk, stage};
-use crate::machines::{EXIT, NO_RECIPE, status};
+use crate::machines::{EXIT, Machine, NO_RECIPE, status};
 use crate::sky::{AFTERGLOW, FALL_TICKS};
-use crate::types::{NONE, TICKS_PER_SEC};
+use crate::types::{NONE, TICKS_PER_SEC, dir};
 use crate::world::{CORE_SIZE, World, stat};
 
 #[repr(C)]
@@ -41,6 +41,7 @@ pub mod sprite {
     pub const BUILDING: u8 = 64;
     pub const DRONE: u8 = 126;
     pub const TUNNEL_EXIT: u8 = 127;
+    /// A straight belt; with a param, a stub of belt running under a building (see `STUB`).
     pub const BELT: u8 = 128;
     pub const BELT_RIGHT: u8 = 129;
     pub const BELT_LEFT: u8 = 130;
@@ -73,6 +74,15 @@ const TILE: u8 = 16;
 const ITEM: u8 = 8;
 /// A machine must be stuck this long (ticks) before it gets a problem badge.
 const STALL_BADGE: u8 = 90;
+/// Belts fill their tiles, but buildings sit inset in theirs; where a belt feeds a building
+/// or leaves one, a stub of belt this long (1/255 tile) runs under it so the two touch.
+/// The Core's corners are rounder, so its stubs reach further.
+const STUB: u8 = 46;
+const CORE_STUB: u8 = 77;
+/// Stub flags above the rotation bits: the building is behind the stub rather than ahead,
+/// and (machine to machine) there is a building at both ends.
+const STUB_BEHIND: u8 = 4;
+const STUB_BOTH: u8 = 8;
 
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Cursor {
@@ -130,6 +140,30 @@ fn unit(h: u32) -> f32 {
     (h & 0xffff) as f32 / 65536.0
 }
 
+/// Whether machine `m` takes items in through its side facing direction `face`.
+fn takes_from(m: &Machine, face: u8) -> bool {
+    let behind = face == dir::opposite(m.dir);
+    match m.class() {
+        Class::Crafter | Class::Storage | Class::DronePort | Class::Recycler => face != m.dir,
+        Class::Terraformer | Class::Incinerator => true,
+        Class::Generator => BUILDINGS[m.kind as usize].fuel.0 != 0,
+        Class::Splitter | Class::Sorter => behind,
+        Class::Tunnel => behind && m.rr != EXIT,
+        _ => false,
+    }
+}
+
+/// The sides (a bit per direction) machine `m` puts items out through.
+fn out_faces(m: &Machine) -> u8 {
+    let front = 1 << m.dir;
+    match m.class() {
+        Class::Drill | Class::Pump | Class::Crafter | Class::Storage | Class::DronePort => front,
+        Class::Tunnel if m.rr == EXIT => front,
+        Class::Splitter | Class::Sorter => front | 1 << dir::ccw(m.dir) | 1 << dir::cw(m.dir),
+        _ => 0,
+    }
+}
+
 impl World {
     /// Fills the instance buffer for the view rectangle (tile units) and returns the count.
     /// `alpha` in [0, 1) interpolates moving things between the last two ticks. `flags`
@@ -169,15 +203,65 @@ impl World {
                             (sprite::BELT_LEFT, in_d)
                         };
                         push(&mut out, sprite_at(x as f32 + 0.5, y as f32 + 0.5, spr, rot, TILE, 0, WHITE));
+                        // A belt feeding a building runs a little way under it.
+                        let n = g.step(t as u32, out_d);
+                        let len = match if n == NONE { bk::EMPTY } else { g.kind[n as usize] } {
+                            bk::CORE => CORE_STUB,
+                            nk if nk > bk::CORE
+                                && takes_from(
+                                    &self.machines.list[g.ent[n as usize] as usize],
+                                    dir::opposite(out_d),
+                                ) =>
+                            {
+                                STUB
+                            }
+                            _ => 0,
+                        };
+                        if len > 0 {
+                            let (sx, sy) = (
+                                x as f32 + 0.5 + 0.5 * dir::dx(out_d) as f32,
+                                y as f32 + 0.5 + 0.5 * dir::dy(out_d) as f32,
+                            );
+                            push(&mut out, sprite_at(sx, sy, sprite::BELT, out_d, TILE, len, WHITE));
+                        }
                     } else if k > bk::CORE && g.seen[t] != 0 {
                         visible.push(g.ent[t]);
                     }
                 }
             }
 
-            // Machines, with a badge showing what each one makes.
             let w = g.w as u32;
             let ms = &self.machines;
+            // Outputs run a stub under the building they leave too (and, when a machine
+            // hands items straight to another, under both), drawn before the machines.
+            for &i in &visible {
+                let m = &ms.list[i as usize];
+                let faces = out_faces(m);
+                if faces == 0 {
+                    continue;
+                }
+                let (cx, cy) = ((m.tile % w) as f32 + 0.5, (m.tile / w) as f32 + 0.5);
+                for d in 0..4u8 {
+                    let n = g.step(m.tile, d);
+                    if faces & (1 << d) == 0 || n == NONE {
+                        continue;
+                    }
+                    let flags = match g.kind[n as usize] {
+                        bk::BELT if g.dir[n as usize] != dir::opposite(d) => STUB_BEHIND,
+                        bk::CORE => STUB_BEHIND | STUB_BOTH,
+                        nk if nk > bk::CORE
+                            && takes_from(&ms.list[g.ent[n as usize] as usize], dir::opposite(d)) =>
+                        {
+                            STUB_BEHIND | STUB_BOTH
+                        }
+                        _ => continue,
+                    };
+                    let (sx, sy) = (cx + 0.5 * dir::dx(d) as f32, cy + 0.5 * dir::dy(d) as f32);
+                    push(&mut out, sprite_at(sx, sy, sprite::BELT, d | flags, TILE, STUB, WHITE));
+                }
+            }
+
+            // Machines, with a badge showing what each one makes.
             for &i in &visible {
                 let m = &ms.list[i as usize];
                 let (cx, cy) = ((m.tile % w) as f32 + 0.5, (m.tile / w) as f32 + 0.5);
