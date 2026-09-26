@@ -91,6 +91,15 @@ scripts/      build.mjs (cargo → wasm-opt → esbuild → hashed assets → sw
    DOM inside a sheet must be re-attached after a render, as `DemoPlayer.attach` does.
 10. **Relative URLs only**, so the site works under any Pages sub-path.
 
+## Reviewing the agent harness
+
+The project enables the Better Harness plugin (`QoderAI/better-harness`, declared in
+`.claude/settings.json`). `/better-harness` reviews this agent setup (instructions,
+skills, feedback loops, recent session outcomes) and writes a report to
+`.claude/better-harness/` (git-ignored). It reads this project's local session
+transcripts; its optional `upload` command is never needed for a report. Its CLI declares
+Node 22.20–24 (see KNOWN-ISSUES.md → Environment notes).
+
 ## Debugging
 
 - Dev builds expose `window.fx` = `{ engine, cam, renderer, input, hud, sheets, library,

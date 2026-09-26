@@ -90,6 +90,11 @@ mistakes already made once in this codebase; each cost real time to track down.
 
 ## Environment notes (the owner's machine)
 
+- Node is 26.4.0 (mise). The Better Harness plugin's CLI declares Node
+  `>=22.20.0 <25.0.0`; its help runs on 26, but a `/better-harness` run may stop and ask
+  for a supported runtime. Installing Node 24 alongside (for example with mise) fixes it;
+  this project itself only needs Node ≥ 20 (CI uses 22).
+
 - A global command-rewriting hook (`rtk`) wraps shell commands. A long compound command
   mixing `ls` with a heredoc once hung for two minutes: keep shell steps short, and make
   multi-line edits with the Edit tool or a script file.

@@ -19,5 +19,16 @@
       "Bash(gh run view *)",
       "Bash(gh run watch *)"
     ]
+  },
+  "extraKnownMarketplaces": {
+    "better-harness": {
+      "source": {
+        "source": "github",
+        "repo": "QoderAI/better-harness"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "better-harness@better-harness": true
   }
 }
