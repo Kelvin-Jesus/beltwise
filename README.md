@@ -136,7 +136,7 @@ engine/src/
   save.rs        binary save format (versioned, validated, deterministic; loads v1)
   worldgen.rs    terrain fields, deposits with purity, wrecks
   demo.rs        blank sandbox maps for the guide's live demos
-  lib.rs         the C ABI; tests.rs has 55 tests and a benchmark
+  lib.rs         the C ABI; tests.rs has 58 tests, a benchmark and a save-fixture writer
 web/src/
   main.ts        loop, LOD, frame pacing, events, blueprints, launch cinematic
   engine.ts      Wasm loading, views, save/load

@@ -11,7 +11,7 @@ Engine logic is covered by `cargo test`; everything on screen is verified by loo
 
 1. `preview_start` with name `dev` (from `.claude/launch.json`): http://localhost:8000,
    rebuilding Rust and TypeScript on save. Use `preview` (port 4173, `/beltwise/`) to test
-   a production build (`npm run build` first) or the service worker.
+   a production build (`mise x -- npm run build` first) or the service worker.
 2. Open `http://localhost:8000/?notitle` (skips the title screen). After an engine change
    wait for "rebuilt engine.wasm" in the server logs (about 4 s), then reload.
 3. Check the console for errors (`read_console_messages` with `onlyErrors`).
@@ -82,10 +82,13 @@ A machine reported as blocked is usually just backpressure.
 ## After pushing
 
 ```bash
-gh run list --limit 1
+gh run list --commit "$(git rev-parse HEAD)" --limit 1   # retry for a few seconds if empty
 gh run watch <id> --exit-status
 ```
 
+If the run fails, the live site keeps the previous build. Fix forward and push again, or,
+with the owner's approval, `git revert` the commit and push; never force-push.
+
 Then open https://kelvin-jesus.github.io/beltwise/?notitle and confirm the new build is
-served (the `main.js?v=` hash in the page matches the one `npm run build` printed); play
+served (the `main.js?v=` hash in the page matches the one `mise x -- npm run build` printed); play
 whatever changed.

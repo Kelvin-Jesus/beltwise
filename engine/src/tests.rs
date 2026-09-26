@@ -1246,6 +1246,59 @@ fn content_tables_are_consistent() {
     );
 }
 
+// ---- Compatibility guards ------------------------------------------------------------------
+
+/// The fixture world: a small, fixed factory saved as `engine/tests/fixtures/save-v2.bwsave`.
+fn fixture_world() -> World {
+    let mut w = world();
+    let (cx, cy) = (w.core.x, w.core.y);
+    deposit(&mut w, cx - 8, cy, it::IRON_ORE);
+    assert!(w.place(cx - 8, cy, bk::DRILL, dir::E));
+    belt_line(&mut w, cx - 7, cy, 2, dir::E);
+    assert!(w.place(cx - 5, cy, bk::SMELTER, dir::E));
+    belt_line(&mut w, cx - 4, cy, 4, dir::E);
+    w.core.stored[it::GEAR as usize] = 123;
+    run(&mut w, 300);
+    w
+}
+
+/// Regenerates the fixture. Run only when a save-format change comes with a VERSION bump:
+/// cargo test -p engine write_save_fixture -- --ignored
+#[test]
+#[ignore = "writes engine/tests/fixtures/save-v2.bwsave"]
+fn write_save_fixture() {
+    let mut w = fixture_world();
+    let mut out = Vec::new();
+    w.save(&mut out, 1_790_000_000.0);
+    std::fs::write(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/save-v2.bwsave"), out).unwrap();
+}
+
+#[test]
+fn saves_from_an_earlier_build_still_load() {
+    // Written by an earlier build. If this fails after a content change, bump VERSION in
+    // save.rs and migrate the old layout; never regenerate the fixture to make it pass.
+    let bytes = include_bytes!("../tests/fixtures/save-v2.bwsave");
+    let w = World::load(bytes).expect("a version 2 save from an earlier build must load");
+    assert_eq!(w.core.stored[it::GEAR as usize], 123);
+    assert!(w.machine_count() >= 2, "the drill and smelter come back");
+}
+
+#[test]
+fn content_json_escapes_text() {
+    use crate::content::J;
+    assert_eq!(format!("{}", J("a \"b\" \\ c\nd")), "a \\\"b\\\" \\\\ c\\nd");
+    let json = crate::content::content_json();
+    assert!(json.contains("\\\"Belts before breakfast.\\\""));
+}
+
+#[test]
+fn tables_fit_the_renderer_and_atlas() {
+    // The far-zoom shader holds 40 building colours; the atlas has 64 item cells.
+    const { assert!(crate::content::BUILDING_COUNT <= 40) };
+    const { assert!(ITEM_COUNT <= 64) };
+    assert!(crate::content::RESOURCE_COUNT as usize <= 9);
+}
+
 // ---- Demo scenes ----------------------------------------------------------------------------
 
 fn demo(core: (i32, i32), options: u32) -> World {

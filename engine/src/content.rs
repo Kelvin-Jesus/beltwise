@@ -1658,7 +1658,7 @@ pub const LOGS: [LogDef; 10] = [
     },
     LogDef {
         title: "Survey note",
-        text: "Rich iron to the west, copper glinting under the frost. Someone scratched a message on this crate: \\\"Belts before breakfast.\\\" Morale is holding.",
+        text: "Rich iron to the west, copper glinting under the frost. Someone scratched a message on this crate: \"Belts before breakfast.\" Morale is holding.",
     },
     LogDef {
         title: "Engineer's confession",
@@ -1876,20 +1876,39 @@ fn list<T>(s: &mut String, items: &[T], mut f: impl FnMut(&mut String, usize, &T
 }
 
 /// Every static table the UI needs, as one JSON document built once at start-up.
+/// A string written as JSON string contents: quotes, backslashes and control characters
+/// are escaped, so content text can contain anything.
+pub struct J<'a>(pub &'a str);
+
+impl core::fmt::Display for J<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        for c in self.0.chars() {
+            match c {
+                '"' => f.write_str("\\\"")?,
+                '\\' => f.write_str("\\\\")?,
+                '\n' => f.write_str("\\n")?,
+                c if (c as u32) < 0x20 => write!(f, "\\u{:04x}", c as u32)?,
+                c => f.write_char(c)?,
+            }
+        }
+        Ok(())
+    }
+}
+
 pub fn content_json() -> String {
     let mut s = String::with_capacity(64 * 1024);
     s.push_str("{\"items\":");
     list(&mut s, &ITEMS, |s, _, d| {
-        let _ = write!(s, "{{\"key\":\"{}\",\"name\":\"{}\",\"value\":{}}}", d.key, d.name, d.value);
+        let _ = write!(s, "{{\"key\":\"{}\",\"name\":\"{}\",\"value\":{}}}", J(d.key), J(d.name), d.value);
     });
     s.push_str(",\"buildings\":");
     list(&mut s, &BUILDINGS, |s, _, d| {
         let _ = write!(
             s,
             "{{\"key\":\"{}\",\"name\":\"{}\",\"desc\":\"{}\",\"class\":\"{}\",\"category\":{},\"meter\":{},\"points\":{},\"research\":{},\"power\":{},\"fuel\":[{},{}],\"store\":{},\"cost\":",
-            d.key,
-            d.name,
-            d.desc,
+            J(d.key),
+            J(d.name),
+            J(d.desc),
             d.class.key(),
             d.category,
             d.meter,
@@ -1913,7 +1932,11 @@ pub fn content_json() -> String {
             let _ = write!(
                 s,
                 ",\"output\":[{},{}],\"ticks\":{},\"unlock\":{},\"name\":\"{}\"}}",
-                rc.output.0, rc.output.1, rc.ticks, rc.unlock, rc.name
+                rc.output.0,
+                rc.output.1,
+                rc.ticks,
+                rc.unlock,
+                J(rc.name)
             );
         });
         s.push('}');
@@ -1923,7 +1946,12 @@ pub fn content_json() -> String {
         let _ = write!(
             s,
             "{{\"key\":\"{}\",\"name\":\"{}\",\"desc\":\"{}\",\"stage\":{},\"tier\":{},\"repeat\":{},\"cost\":",
-            d.key, d.name, d.desc, d.stage, d.tier, d.repeat
+            J(d.key),
+            J(d.name),
+            J(d.desc),
+            d.stage,
+            d.tier,
+            d.repeat
         );
         pairs(s, d.cost);
         s.push_str(",\"requires\":");
@@ -1959,7 +1987,7 @@ pub fn content_json() -> String {
     });
     s.push_str(",\"ark\":");
     list(&mut s, &ARK, |s, _, d| {
-        let _ = write!(s, "{{\"name\":\"{}\",\"desc\":\"{}\",\"cost\":", d.name, d.desc);
+        let _ = write!(s, "{{\"name\":\"{}\",\"desc\":\"{}\",\"cost\":", J(d.name), J(d.desc));
         pairs(s, d.cost);
         s.push('}');
     });
@@ -1968,18 +1996,28 @@ pub fn content_json() -> String {
         let _ = write!(
             s,
             "{{\"name\":\"{}\",\"desc\":\"{}\",\"ti\":{},\"credits\":{},\"shards\":{}}}",
-            d.name, d.desc, d.ti, d.credits, d.shards
+            J(d.name),
+            J(d.desc),
+            d.ti,
+            d.credits,
+            d.shards
         );
     });
     s.push_str(",\"meters\":");
     list(&mut s, &METER_NAMES, |s, i, name| {
-        let _ = write!(s, "{{\"name\":\"{}\",\"full\":{}}}", name, METER_FULL[i]);
+        let _ = write!(s, "{{\"name\":\"{}\",\"full\":{}}}", J(name), METER_FULL[i]);
     });
     s.push_str(",\"objectives\":");
     list(&mut s, &OBJECTIVES, |s, _, d| {
         let (kind, a, b) = goal_parts(d.goal);
-        let _ =
-            write!(s, "{{\"text\":\"{}\",\"kind\":\"{}\",\"a\":{},\"b\":{},\"reward\":", d.text, kind, a, b);
+        let _ = write!(
+            s,
+            "{{\"text\":\"{}\",\"kind\":\"{}\",\"a\":{},\"b\":{},\"reward\":",
+            J(d.text),
+            kind,
+            a,
+            b
+        );
         pairs(s, d.reward);
         s.push('}');
     });
@@ -1988,12 +2026,16 @@ pub fn content_json() -> String {
         let _ = write!(
             s,
             "{{\"key\":\"{}\",\"name\":\"{}\",\"desc\":\"{}\",\"credits\":{},\"shards\":{}}}",
-            d.key, d.name, d.desc, d.credits, d.shards
+            J(d.key),
+            J(d.name),
+            J(d.desc),
+            d.credits,
+            d.shards
         );
     });
     s.push_str(",\"logs\":");
     list(&mut s, &LOGS, |s, _, d| {
-        let _ = write!(s, "{{\"title\":\"{}\",\"text\":\"{}\"}}", d.title, d.text);
+        let _ = write!(s, "{{\"title\":\"{}\",\"text\":\"{}\"}}", J(d.title), J(d.text));
     });
     s.push_str(",\"alternates\":[");
     let mut first = true;
@@ -2019,7 +2061,13 @@ pub fn content_json() -> String {
         let _ = write!(
             s,
             "{{\"key\":\"{}\",\"name\":\"{}\",\"desc\":\"{}\",\"price\":{},\"kind\":\"{}\",\"a\":{},\"b\":{}}}",
-            d.key, d.name, d.desc, d.price, kind, a, b
+            J(d.key),
+            J(d.name),
+            J(d.desc),
+            d.price,
+            kind,
+            a,
+            b
         );
     });
     s.push_str(",\"planets\":");
@@ -2027,15 +2075,18 @@ pub fn content_json() -> String {
         let _ = write!(
             s,
             "{{\"key\":\"{}\",\"name\":\"{}\",\"desc\":\"{}\",\"unlock\":{}}}",
-            d.key, d.name, d.desc, d.unlock
+            J(d.key),
+            J(d.name),
+            J(d.desc),
+            d.unlock
         );
     });
     let _ = write!(
         s,
         ",\"purity\":[\"{}\",\"{}\",\"{}\"],\"beltSpeeds\":[{},{},{}],\"storageCap\":{},\"poleRadius\":{},\"poleLink\":{},\"coreRadius\":{},\"corePower\":{},\"clockPct\":[{},{},{},{}],\"legacyPct\":{}}}",
-        PURITY_NAMES[0],
-        PURITY_NAMES[1],
-        PURITY_NAMES[2],
+        J(PURITY_NAMES[0]),
+        J(PURITY_NAMES[1]),
+        J(PURITY_NAMES[2]),
         BELT_SPEEDS[0],
         BELT_SPEEDS[1],
         BELT_SPEEDS[2],

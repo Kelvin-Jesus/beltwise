@@ -9,6 +9,7 @@
     "build": "node scripts/build.mjs",
     "preview": "node scripts/preview.mjs",
     "typecheck": "tsc --noEmit",
+    "check": "node scripts/check-build.mjs",
     "test": "cargo test -p engine",
     "bench": "cargo test -p engine --release -- --ignored --nocapture"
   },

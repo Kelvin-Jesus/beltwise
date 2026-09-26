@@ -55,6 +55,9 @@ jobs:
       - name: Build (cargo release -> wasm-opt -O3 -> esbuild)
         run: npm run build
 
+      - name: Smoke-test the build and check mirrored tables
+        run: npm run check
+
       - name: Report bundle size
         run: |
           {

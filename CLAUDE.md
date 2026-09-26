@@ -25,12 +25,14 @@ problems and pitfalls already hit), [docs/adr/](docs/adr/) (why it is built this
 
 | Task | Command |
 | --- | --- |
-| Dev server (rebuilds Rust and TS on save) | `npm run dev` → http://localhost:8000 (`HOST=0.0.0.0` for LAN) |
-| Production build to `dist/` | `npm run build` |
-| Serve `dist/` like Pages (`/beltwise/`) | `npm run preview` → http://localhost:4173/beltwise/ |
-| Engine tests (55 + 1 ignored benchmark) | `npm test` (= `cargo test -p engine`) |
-| Headless benchmark | `npm run bench` |
-| Typecheck | `npm run typecheck` |
+| Install Node dependencies | `mise x -- npm ci` |
+| Dev server (rebuilds Rust and TS on save) | `mise x -- npm run dev` → http://localhost:8000 (`HOST=0.0.0.0` for LAN) |
+| Production build to `dist/` | `mise x -- npm run build` |
+| Serve `dist/` like Pages (`/beltwise/`) | `mise x -- npm run preview` → http://localhost:4173/beltwise/ |
+| Engine tests (58 + benchmark and fixture writer, ignored) | `mise x -- npm test` (= `cargo test -p engine`) |
+| Headless benchmark | `mise x -- npm run bench` |
+| Typecheck | `mise x -- npm run typecheck` |
+| Smoke-test `dist/` and check mirrored tables | `mise x -- npm run check` |
 | Format / lint Rust | `cargo fmt --all`, `cargo clippy -p engine --all-targets --locked -- -D warnings` |
 
 Node is pinned to 22 in `mise.toml`, the version CI uses (the machine's default is 26).
@@ -49,9 +51,14 @@ Run what CI runs (`.github/workflows/deploy.yml`); all must pass:
 cargo fmt --all --check
 cargo clippy -p engine --all-targets --locked -- -D warnings
 cargo test -p engine --locked
-npm run typecheck
-npm run build
+mise x -- npm run typecheck
+mise x -- npm run build
+mise x -- npm run check
 ```
+
+A project hook (`.claude/settings.json` → `scripts/pre-push-check.sh`) runs the same list
+before any `git push` from an agent and blocks the push if one fails (log in
+`/tmp/beltwise-pre-push.log`). Force-pushes are denied.
 
 Then, for anything visible, look at it in the browser pane on desktop and at 375×812
 (skill `verify-in-browser`). Update the docs the change touches: README (features, test
@@ -83,7 +90,9 @@ scripts/      build.mjs (cargo → wasm-opt → esbuild → hashed assets → sw
 3. **Saves.** Item, building and tech ids are part of the save format: append, never
    renumber or reorder. Per-item arrays are written without a length, so even appending
    an item (or a repeatable research) changes the layout: bump `VERSION` in `save.rs`,
-   keep the previous version loading, and extend the save tests.
+   keep the previous version loading, and extend the save tests. The test
+   `saves_from_an_earlier_build_still_load` loads `engine/tests/fixtures/save-v2.bwsave`:
+   never regenerate that fixture to make it pass; add a fixture for the new version instead.
 4. **Hot paths allocate nothing:** `World::tick`, `World::render` and the `main.ts` frame
    loop. Reuse scratch buffers kept on `World`; the instance buffer never grows.
 5. **Machine IO rules** live in `Machines::accept`/`process`; `render.rs`

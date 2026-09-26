@@ -13,7 +13,7 @@ mistakes already made once in this codebase; each cost real time to track down.
 | Memory | The guide's demo player keeps its engine instance, its WebGL context and a second copy of the icon atlas (about 11 MB of GPU memory with mipmaps, plus 3 MB of instance buffers) alive after the first demo. | `demo.ts`. Could share one context or free it after a while on low-memory devices. |
 | UI | Blueprint naming, deletion, New planet and Launch use the browser's `prompt()` / `confirm()`. They work but look out of place, and some embedded browsers block them. | `main.ts`. |
 | CI | GitHub warns that actions built for Node 20 are forced onto Node 24, and that `ubuntu-latest` moves to Ubuntu 26 from 2026-10-19. Watch the first runs after that date. | `.github/workflows/deploy.yml`. |
-| Tests | Only the engine has tests. The TypeScript side (UI, renderer, demo scenes) is checked by typecheck and by hand in the browser. | See skill `verify-in-browser`. |
+| Tests | Only the engine has tests. The TypeScript side (UI, renderer, demo scenes) is checked by typecheck, by `npm run check` (the built Wasm loads, its ABI and the mirrored stat/sprite tables match `constants.ts`) and by hand in the browser. | See skill `verify-in-browser`. |
 
 ## Limits (by design, but easy to trip over)
 
@@ -40,6 +40,8 @@ mistakes already made once in this codebase; each cost real time to track down.
 - Edition 2024 reserves `gen`: it can't be a variable name.
 - `content.rs` glob-imports both `it::*` and `tech::*`. A tech constant named like an item
   is ambiguous, which is why the techs are `SILICA` and `POLLINATORS`, not `SILICON`/`SEEDS`.
+- A save the engine can't read is kept under `beltwise.save.v2.unreadable` and the game
+  starts fresh with a toast; nothing else ever reads that key back.
 - Save bytes include the per-minute rate windows. Tests that compare saves of worlds with
   different histories must call `clear_rate_history()` first.
 - Placing a machine over a belt replaces the belt without a word. Generated layouts

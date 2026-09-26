@@ -24,7 +24,9 @@ mirrors do not. Work through the relevant section, then the "Always" list.
    `item(key, name, value)` to `ITEMS` (`value` = credits a Recycler pays).
 2. **Save format change.** Per-item arrays are saved without a length: bump `VERSION` in
    `save.rs` and teach `load` to read the previous version's `ITEM_COUNT` (see how
-   `load_v1` uses `V1_ITEMS`). Add a test that a save written before the change still loads.
+   `load_v1` uses `V1_ITEMS`). Add a test that a save written before the change still loads: keep
+   `engine/tests/fixtures/save-v2.bwsave` loading (never regenerate it) and add a fixture for
+   the new version with the ignored `write_save_fixture` test.
 3. Recipes that make and use it (see "A recipe"); give it at least one use.
 4. `web/src/icons.ts`: an entry in `ITEM_ART` (Canvas2D, drawn in a 128 px cell centred on
    the origin; look at neighbours for style).
@@ -80,7 +82,7 @@ mirrors do not. Work through the relevant section, then the "Always" list.
 ## Always
 
 1. `cargo test -p engine --locked` (includes `content_tables_are_consistent` and the save
-   round trips), clippy, `npm run typecheck`, `npm run build`.
+   round trips), clippy, `mise x -- npm run typecheck`, `mise x -- npm run build`, `mise x -- npm run check`.
 2. In the browser (skill `verify-in-browser`): it appears in the build bar or research,
    its codex page reads well, and every demo on that page plays (run the demo sweep).
 3. Update README (feature counts such as "35 buildings", "26 products") and DESIGN.md

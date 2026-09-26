@@ -7,6 +7,8 @@ import type { Engine } from './engine';
 
 const KEY = 'beltwise.save.v2';
 const CAM_KEY = 'beltwise.cam';
+/** Where an autosave that failed to load is kept, so a new game never overwrites it. */
+export const BACKUP_KEY = 'beltwise.save.v2.unreadable';
 
 function toBase64(bytes: Uint8Array): string {
   let s = '';
@@ -27,6 +29,8 @@ export class Saves {
   lastSaved = 0;
   /** Saving is paused while the benchmark borrows the engine. */
   paused = false;
+  /** Set when the stored save could not be loaded and was moved to `BACKUP_KEY`. */
+  keptUnreadable = false;
 
   constructor(
     private readonly engine: Engine,
@@ -49,8 +53,18 @@ export class Saves {
     try {
       const b64 = localStorage.getItem(KEY);
       if (!b64) return null;
-      const savedAt = this.engine.load(fromBase64(b64));
-      if (savedAt === null) return null;
+      let savedAt: number | null = null;
+      try {
+        savedAt = this.engine.load(fromBase64(b64));
+      } catch {
+        savedAt = null;
+      }
+      if (savedAt === null) {
+        // Keep the unreadable save before autosave can replace it with a new game.
+        localStorage.setItem(BACKUP_KEY, b64);
+        this.keptUnreadable = true;
+        return null;
+      }
       const cam = JSON.parse(localStorage.getItem(CAM_KEY) ?? 'null');
       if (cam && Number.isFinite(cam.x)) Object.assign(this.cam, { x: cam.x, y: cam.y, zoom: cam.zoom });
       return savedAt;

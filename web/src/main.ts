@@ -656,6 +656,9 @@ async function main(): Promise<void> {
     );
   };
 
+  if (saves.keptUnreadable) {
+    setTimeout(() => hud.toast('Your previous save could not be loaded. It was kept in this browser as a backup and a new game started.', 'bad', 9000), 800);
+  }
   const title = new Title(!firstRun && savedAt !== null, {
     onPlay() {
       sound.play('click');

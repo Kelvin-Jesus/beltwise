@@ -3,8 +3,11 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "mise",
       "runtimeArgs": [
+        "x",
+        "--",
+        "npm",
         "run",
         "dev"
       ],
@@ -12,8 +15,11 @@
     },
     {
       "name": "preview",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "mise",
       "runtimeArgs": [
+        "x",
+        "--",
+        "npm",
         "run",
         "preview"
       ],
