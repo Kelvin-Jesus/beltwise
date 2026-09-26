@@ -18,6 +18,8 @@ problems and pitfalls already hit), [docs/adr/](docs/adr/) (why it is built this
   Pages, so only push what passes the checks below, then watch the run
   (`gh run list --limit 1`, `gh run watch <id> --exit-status`).
 - Pure refactors are welcome only when they serve the task; keep diffs focused.
+- Need another version of a language or runtime? Use mise: `mise use <tool>@<version>`
+  to pin it for the repo (`mise.toml`), `mise x <tool>@<version> -- <cmd>` for a one-off.
 
 ## Commands
 
@@ -30,6 +32,11 @@ problems and pitfalls already hit), [docs/adr/](docs/adr/) (why it is built this
 | Headless benchmark | `npm run bench` |
 | Typecheck | `npm run typecheck` |
 | Format / lint Rust | `cargo fmt --all`, `cargo clippy -p engine --all-targets --locked -- -D warnings` |
+
+Node is pinned to 22 in `mise.toml`, the version CI uses (the machine's default is 26).
+Agent shells don't switch versions per directory, so prefix Node tools with `mise x --`
+(`mise x -- npm run build`); `mise which node` prints the pinned binary. Rust is pinned by
+`rust-toolchain.toml`.
 
 In the desktop app, start servers with the browser pane's `preview_start` and the names in
 `.claude/launch.json` (`dev`, `preview`) instead of running them in a shell.
@@ -97,8 +104,10 @@ The project enables the Better Harness plugin (`QoderAI/better-harness`, declare
 `.claude/settings.json`). `/better-harness` reviews this agent setup (instructions,
 skills, feedback loops, recent session outcomes) and writes a report to
 `.claude/better-harness/` (git-ignored). It reads this project's local session
-transcripts; its optional `upload` command is never needed for a report. Its CLI declares
-Node 22.20–24 (see KNOWN-ISSUES.md → Environment notes).
+transcripts; its optional `upload` command is never needed for a report. Its CLI needs
+Node 22.20–24: use the repo's pinned Node (`mise x -- node …`, or the path from
+`mise which node`). `mise x -- node <plugin>/scripts/better-harness.mjs doctor --platform
+claude` checks the install without reading transcripts.
 
 ## Debugging
 

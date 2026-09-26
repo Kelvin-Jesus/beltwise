@@ -86,7 +86,8 @@ places a stray building.
 
 ## Develop
 
-Prerequisites: [rustup](https://rustup.rs) and Node ≥ 20. The pinned Rust toolchain and
+Prerequisites: [rustup](https://rustup.rs) and Node ≥ 20 (`mise.toml` pins Node 22, the
+version CI uses, for [mise](https://mise.jdx.dev) users). The pinned Rust toolchain and
 wasm target install themselves from `rust-toolchain.toml`.
 
 ```bash
