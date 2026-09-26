@@ -101,6 +101,11 @@ npm run preview    # serves dist/ under /beltwise/ like GitHub Pages; prints a L
 URL parameters: `?bench` runs the benchmark, `?seed=123` starts a different world,
 `?dpr=1` forces the render resolution, `?notitle` skips the title screen.
 
+Before changing the code, read [CLAUDE.md](CLAUDE.md) (commands, the checks CI runs,
+invariants), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and
+[docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md). They are written for coding agents and
+people alike.
+
 ## Deploy to GitHub Pages
 
 1. Push to a GitHub repository with `main` as the default branch.
@@ -143,7 +148,9 @@ web/src/
   blueprints.ts  save.ts  audio.ts  pwa.ts  bench.ts
 web/sw.js        service worker template;  web/public/  icons, logo and manifest
 design/logos/    the logo sheet and make-icons.sh, which builds every icon from it
-docs/DESIGN.md   design intent behind the numbers
+docs/            DESIGN.md (design intent), ARCHITECTURE.md (how it fits together),
+                 KNOWN-ISSUES.md (open problems and pitfalls), adr/ (decision records)
+CLAUDE.md        guide for coding agents; .claude/ holds their settings and skills
 ```
 
 ## Adding content

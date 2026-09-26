@@ -4,4 +4,8 @@
 /.dev
 .DS_Store
 *.log
-/.claude
+# Shared agent config is tracked; local overrides and worktrees are not.
+/.claude/*
+!/.claude/settings.json
+!/.claude/launch.json
+!/.claude/skills/
